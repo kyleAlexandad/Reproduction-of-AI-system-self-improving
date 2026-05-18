@@ -9,7 +9,7 @@ Over the past several months, Google Research scientists and collaborative acade
 ---
 
 ## Quick Links
-- [Nature Publication: AI system designed to help scientists write expert-level empirical software](#) *(link forthcoming)*
+- [AI system designed to help scientists write expert-level empirical software](#) *(link forthcoming)*
 - [ERA Introductory Blog Post](https://research.google/blog/accelerating-scientific-discovery-with-ai-powered-empirical-software/)
 - [ERA Applications Blog Post](https://research.google/blog/four-ways-google-research-scientists-have-been-using-empirical-research-assistance/)
 - 
