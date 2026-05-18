@@ -8,14 +8,6 @@ Over the past several months, Google Research scientists and collaborative acade
 
 ---
 
-## Quick Links
-- [AI system designed to help scientists write expert-level empirical software](#) *(link forthcoming)*
-- [ERA Introductory Blog Post](https://research.google/blog/accelerating-scientific-discovery-with-ai-powered-empirical-software/)
-- [ERA Applications Blog Post](https://research.google/blog/four-ways-google-research-scientists-have-been-using-empirical-research-assistance/)
-- 
-
----
-
 ## Summaries of Published & Submitted Research
 
 ### 1. Public Health: Hospitalization Forecasts for Flu, COVID-19, and RSV
