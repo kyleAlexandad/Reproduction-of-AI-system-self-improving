@@ -70,13 +70,13 @@ Accurate predictions of spring snowmelt runoff are critical for urban water reso
 
 ---
 
-### 7. Macroeconomics: Weekly Retail Sales Forecasting
+### 7. Macroeconomics: Monthly Retail Sales Forecasting
 * **Project Title**: Retail Sales Forecasting
 * **External Link**: *Pending Link*
 * **Local PDF**: *Pending Link*
 
 **Summary**:
-Applying empirical optimization to economic tracking, this project constructs highly accurate weekly retail forecasting models. Feeding on public U.S. economic indicators, Google Trends density, consumer sentiment metrics, and historical demand cycles, the ERA-devised model successfully matches or surpasses leading commercial consensus estimates and the Chicago Fed Advance Retail Trade Summary (CARTS).
+Applying empirical optimization to economic tracking, this project constructs highly accurate monthly retail forecasting models. Feeding on public U.S. economic indicators, Google Trends density, consumer sentiment metrics, and historical demand cycles, the ERA-devised model successfully matches or surpasses leading commercial consensus estimates and the Chicago Fed Advance Retail Trade Summary (CARTS).
 
 ---
 
