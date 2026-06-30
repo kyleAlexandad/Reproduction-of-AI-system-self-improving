@@ -1,0 +1,16 @@
+GIFT_EVAL data = /Users/zhangweikun/era/gift-eval/data
+Loading task m4_weekly/short ...
+freq=W-SUN prediction_length=13 windows=1 season_length=1 target_dim=1
+
+=== Evaluating cand_007.py ===
+  valid=True  MASE=2.778954  CRPS=0.063432  RMSE=673.2308  reward=-2.778954  (0.168s)
+
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_iter20_conservative/candidate_logs/cand_007/candidate_results.json
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_iter20_conservative/candidate_logs/cand_007/candidate_results.csv
+Per-candidate logs in /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_iter20_conservative/candidate_logs/cand_007/logs
+
+--- STDERR ---
+
+0it [00:00, ?it/s]
+359it [00:00, 2213.74it/s]
+359it [00:00, 2212.97it/s]

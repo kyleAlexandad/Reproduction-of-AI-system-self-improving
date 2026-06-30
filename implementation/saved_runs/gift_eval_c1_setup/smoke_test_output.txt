@@ -1,0 +1,20 @@
+GIFT_EVAL = /Users/zhangweikun/era/gift-eval/data
+Loading dataset: m4_weekly (term=short) -> config m4_weekly/W/short
+freq=W-SUN  prediction_length=13  windows=1  season_length=1  target_dim=1
+0it [00:00, ?it/s]359it [00:01, 280.32it/s]359it [00:01, 280.31it/s]
+Evaluation finished in 1.28s
+
+Wrote results to /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c1_setup/all_results.csv
+
+=== METRICS ===
+eval_metrics/MSE[mean]                           453525.1459181487
+eval_metrics/MSE[0.5]                            453525.1459181487
+eval_metrics/MAE[0.5]                            347.99148275123207
+eval_metrics/MASE[0.5]                           2.777295047362158
+eval_metrics/MAPE[0.5]                           0.08937289522218837
+eval_metrics/sMAPE[0.5]                          0.09161286714732429
+eval_metrics/MSIS                                26.631225199626535
+eval_metrics/RMSE[mean]                          673.442756229621
+eval_metrics/NRMSE[mean]                         0.1226908336142798
+eval_metrics/ND[0.5]                             0.06339865521526268
+eval_metrics/mean_weighted_sum_quantile_loss     0.06087039452311706

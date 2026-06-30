@@ -1,0 +1,12 @@
+iteration,candidate_id,parent_id,valid,reward,MASE,CRPS,RMSE,runtime_s,candidate_path,error
+0,0,,True,-2.7772950477470046,2.7772950477470046,0.06339865082261592,673.4427680198704,1.197,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/era_candidates/cand_000.py,
+1,1,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.835,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_001.py,
+2,2,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.834,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_002.py,
+3,3,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.811,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_003.py,
+4,4,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,1.091,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_004.py,
+5,5,0,True,-2.7954158445005133,2.7954158445005133,0.06379961578188748,672.6283048730169,0.845,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_005.py,
+6,6,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,1.123,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_006.py,
+7,7,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.844,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_007.py,
+8,8,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.84,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_008.py,
+9,9,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,1.136,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_009.py,
+10,10,0,True,-2.803881710367426,2.803881710367426,0.06400937136685105,672.6047546879847,0.829,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c4_era_vs_bon_N10/bon_candidates/cand_010.py,

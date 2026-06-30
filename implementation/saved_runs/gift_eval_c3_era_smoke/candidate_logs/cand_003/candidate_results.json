@@ -1,0 +1,21 @@
+{
+  "dataset": "m4_weekly/W-SUN/short",
+  "prediction_length": 13,
+  "season_length": 1,
+  "reward_definition": "reward = -MASE (lower MASE is better -> higher reward)",
+  "results": [
+    {
+      "candidate": "cand_003",
+      "dataset": "m4_weekly/W-SUN/short",
+      "valid": false,
+      "error": "INVALID: candidate raised IndexError: index 2179 is out of bounds for axis 0 with size 2179",
+      "runtime_s": 0.023,
+      "MASE": null,
+      "CRPS": null,
+      "RMSE": null,
+      "MSE_mean": null,
+      "MAE": null,
+      "reward": null
+    }
+  ]
+}

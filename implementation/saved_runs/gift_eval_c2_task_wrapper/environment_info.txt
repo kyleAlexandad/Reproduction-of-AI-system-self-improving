@@ -1,0 +1,23 @@
+=== GIFT-Eval C2 environment info ===
+Tue Jun 30 00:45:44 PDT 2026
+
+## Interpreter used to run the C2 wrapper
+/Users/zhangweikun/era/gift-eval/.venv/bin/python
+Python 3.12.13
+
+## Platform
+Darwin MacBook-Air.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:39:29 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T8142 arm64
+
+## Key package versions
+datasets==2.17.1
+gluonts==0.15.1
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.11.4
+statsforecast==2.0.3
+
+## GIFT_EVAL data path
+GIFT_EVAL=/Users/zhangweikun/era/gift-eval/data
+
+## Datasets present
+m4_weekly

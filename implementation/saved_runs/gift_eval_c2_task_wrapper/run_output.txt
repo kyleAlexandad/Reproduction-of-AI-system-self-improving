@@ -1,0 +1,19 @@
+GIFT_EVAL data = /Users/zhangweikun/era/gift-eval/data
+Loading task m4_weekly/short ...
+freq=W-SUN prediction_length=13 windows=1 season_length=1 target_dim=1
+
+=== Evaluating candidate_naive.py ===
+0it [00:00, ?it/s]359it [00:00, 2287.64it/s]359it [00:00, 2286.55it/s]
+  valid=True  MASE=2.777295  CRPS=0.063399  RMSE=673.4428  reward=-2.777295  (0.16s)
+
+=== Evaluating candidate_seasonal_naive.py ===
+0it [00:00, ?it/s]359it [00:00, 2315.41it/s]359it [00:00, 2314.46it/s]
+  valid=True  MASE=9.577987  CRPS=0.132493  RMSE=1397.8209  reward=-9.577987  (0.156s)
+
+=== Evaluating candidate_moving_average.py ===
+0it [00:00, ?it/s]359it [00:00, 2305.94it/s]359it [00:00, 2305.03it/s]
+  valid=True  MASE=3.420637  CRPS=0.078397  RMSE=802.6817  reward=-3.420637  (0.156s)
+
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c2_task_wrapper/candidate_results.json
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c2_task_wrapper/candidate_results.csv
+Per-candidate logs in /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c2_task_wrapper/logs

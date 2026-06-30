@@ -1,0 +1,15 @@
+GIFT_EVAL data = /Users/zhangweikun/era/gift-eval/data
+Loading task m4_weekly/short ...
+freq=W-SUN prediction_length=13 windows=1 season_length=1 target_dim=1
+
+=== Evaluating cand_003.py ===
+  valid=False  reward=-inf  error=INVALID: candidate raised IndexError: index 2179 is out of bounds for axis 0 with size 2179
+
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidate_logs/cand_003/candidate_results.json
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidate_logs/cand_003/candidate_results.csv
+Per-candidate logs in /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidate_logs/cand_003/logs
+
+--- STDERR ---
+
+0it [00:00, ?it/s]
+0it [00:00, ?it/s]

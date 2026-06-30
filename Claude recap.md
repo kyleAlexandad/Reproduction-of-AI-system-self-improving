@@ -1,10 +1,21 @@
 
 # Claude Recap
 
-> Last updated: 2026-06-29. Repo: `/Users/zhangweikun/era` (git root).
+> Last updated: 2026-06-30. Repo: `/Users/zhangweikun/era` (git root).
 > Working subfolder for all reproduction code: `/Users/zhangweikun/era/implementation`.
-> Latest milestone: **Stage 2 (breast-cancer second benchmark) complete** — ERA beats best-of-N 3/3.
-> Baseline commit on `repro/main`: `b14696a`; later commits add Stage 2 (see `git log`).
+> Latest milestone: **GIFT-Eval Stage C COMPLETE (C1–C4)** — C1 setup ✅, C2 scorer wrapper ✅,
+> C3 ERA tree search ✅ (naive near-optimal, ERA only tied it, best gen within 5.4e-7), **C4 ERA vs
+> best-of-N RUN ✅** (N=10 and N=20: neither beat naive, but **ERA's best generated candidate beat
+> best-of-N's both times** — ERA reached naive exactly while BoN stayed ≈2.795/2.782). The root
+> **README.md was updated** with the full Stage-3 GIFT-Eval section + Final Takeaways. Earlier:
+> Stage 1 (regression) + Stage 2 (breast cancer) complete (ERA beat best-of-N 3/3 each).
+>
+> **READ THIS FIRST — two-environment rule (new in Stage C):** ERA and GIFT-Eval need
+> *incompatible* Python envs. ERA code uses the system brew Python; GIFT-Eval uses its OWN venv at
+> `/Users/zhangweikun/era/gift-eval/.venv`. Never mix them. Details in **§13**.
+>
+> Baseline commits on `repro/main`: `fbc0746`, `b14696a`. GIFT-Eval Stage C work is currently
+> **uncommitted** (see `git status`).
 
 ---
 
@@ -38,10 +49,20 @@ Nature paper *"An AI system to help scientists write expert-level empirical soft
 - **Reports compiled:** Part 1 + Part 2 LaTeX reports compiled to PDF via Tectonic.
 - **Consolidated `README.md`** at repo root + pushed to the user's GitHub repo.
 - **Python toolchain fixed:** native arm64 Python 3.12.13 with all packages.
+- **GIFT-Eval Stage C (the current focus) — see §13 for full detail:**
+  - **C1 ✅** official GIFT-Eval installed in its own venv; Naive baseline reproduces the official
+    `naive.ipynb` numbers exactly on `m4_weekly/W/short` (MASE 2.7773).
+  - **C2 ✅** ERA-scorable wrapper `gift_eval_m4_weekly_task.py` turns a simple `forecast(...)`
+    candidate file into `reward = -MASE`; 3 baseline candidates pass + invalid-handling verified.
+  - **C3 (code-ready, NOT run)** `gift_eval_era_search.py` wires the C2 scorer into `futs.search`
+    + Gemini. Compiles; cross-env subprocess plumbing tested (no Gemini). User runs it manually.
 
 ### Partially working / not yet run
+- **GIFT-Eval C3 not executed yet** — the active next action is for the user to run
+  `gift_eval_era_search.py` manually (it spends Gemini calls). See §13 / §12.
 - **`model_ablation.py`** (flash-lite vs flash) is written + smoke-tested but **NOT run for real** →
-  `saved_runs/model_ablation/` does not exist yet. This is the top TODO.
+  `saved_runs/model_ablation/` does not exist. Now a *secondary* (toy-task) TODO; the user pivoted
+  to GIFT-Eval.
 - **`compare_era_vs_bon.py --repeats`** flag exists (an earlier mean±std version) but the *canonical*
   repeated path is now `repeat_era_vs_bon.py`. Both coexist.
 
@@ -50,6 +71,9 @@ Nature paper *"An AI system to help scientists write expert-level empirical soft
   ("high demand") errors. Mitigated by retries + `SafeGenerator`, but a sustained outage will still
   make runs slow or all-`-inf`.
 - **`futs_test.py` cannot run as-is:** it needs `absl-py`, which is **not installed**.
+- **GIFT-Eval native libs SEGFAULT inside the Cursor agent sandbox** (`statsforecast`/`numba`/
+  `coreforecast` crash with exit 139 *before any output*). They run fine in a normal terminal. So
+  any GIFT-Eval execution (C1/C2/C3 scorer) must be run outside the agent sandbox / by the user.
 
 ### Important assumptions / constraints
 - **`sandbox.py` is NOT secure** — it executes LLM-generated code directly on the machine. Toy use only.
@@ -139,6 +163,8 @@ Nature paper *"An AI system to help scientists write expert-level empirical soft
 | `repeat_era_vs_bon.py` | Repeated comparison → JSON/CSV/plots/`summary.md`. Has `--plot-only`. |
 | `model_ablation.py` | flash-lite vs flash ablation (not run yet). |
 | `plot_progress.py` | Standalone Part-1 progress plotter. |
+| `gift_eval_m4_weekly_task.py` | **GIFT-Eval C2 scorer** (run with the GIFT-Eval venv). `forecast(...)` candidate → `reward=-MASE`. See §13. |
+| `gift_eval_era_search.py` | **GIFT-Eval C3** ERA/FUTS search (run with the ERA env). Scores candidates via subprocess to the C2 scorer. See §13. |
 
 ### Core logic (`implementation/`)
 | File | Role |
@@ -286,12 +312,20 @@ git add -A && git commit -m "..." && git push repro main   # repro = user's repo
 
 ## 8. Remaining TODO
 
-### High priority
-- **Run the model ablation** → answers the user's open question (stick with flash-lite or switch to
-  flash). `python model_ablation.py`. Files: `model_ablation.py`, outputs under
-  `saved_runs/model_ablation/`. Then fold results into `README.md` + `phase3_summary.md` and push.
-- **After ablation, update + push docs** like we did for the repeated run (edit `README.md` §5/§6 and
-  `saved_runs/phase3_summary.md`, then `git push repro main`).
+### High priority — GIFT-Eval Stage C is COMPLETE (C1–C4 all done; see §13)
+- C1/C2/C3/C4 done; root README updated with the full Stage-3 section. Nothing pending in Stage C.
+- **Next dataset (recommended):** pick a small GIFT-Eval config where naive is *weaker* (e.g.
+  `bizitobs_l2c/H`, or an `ett*`/`electricity` config) so ERA has real headroom to BEAT naive (not
+  just tie it). Reuse the same wrapper+scorer: download via
+  `hf download Salesforce/GiftEval --include "<ds>/*" --local-dir gift-eval/data`, then point the
+  C2/C3/C4 scripts at it (currently hardcoded to `m4_weekly`; parametrise `DATASET_NAME`/`TERM`).
+- **Optional richer reward:** extend the candidate interface to return quantiles so CRPS (not just
+  MASE) can be optimized.
+
+### Secondary (toy-task track, paused)
+- **Run the model ablation** (flash-lite vs flash): `python model_ablation.py` → outputs under
+  `saved_runs/model_ablation/`; fold into `README.md` + `phase3_summary.md` and push. Deprioritised
+  after the user pivoted to GIFT-Eval.
 
 ### Medium priority
 - **Tighten the repeated result** — `--num_repeats 5` (or `--N 20`) for a less noisy mean±std, if the
@@ -380,25 +414,168 @@ git add -A && git commit -m "..." && git push repro main   # repro = user's repo
 Paste this into a fresh Claude Code session:
 
 ```
-Read "Claude recap.md" in the project root first to load full context. This is the
-google-research/era reproduction; all code is in /Users/zhangweikun/era/implementation,
-and python = the Homebrew arm64 Python 3.12.
+Read "Claude recap.md" in the project root first to load full context, especially §13
+(GIFT-Eval Stage C) and the two-environment rule. This is the google-research/era
+reproduction; ERA code is in /Users/zhangweikun/era/implementation.
 
-Then continue from the HIGH-priority TODOs in section 8:
+GIFT-Eval Stage C (C1–C4) is COMPLETE and the root README is updated (see §13). On
+m4_weekly/W/short naive is near-optimal: ERA tied it and beat best-of-N both at N=10 and N=20, but
+neither beat naive. The recommended next step is a NEW GIFT-Eval dataset where naive is weaker so
+ERA can actually beat it (see §8). To add one:
 
-1. Run the model ablation to decide flash-lite vs flash:
-     cd /Users/zhangweikun/era/implementation
-     unset GOOGLE_API_KEY
-     export GEMINI_API_KEY="<my key>"
-     python model_ablation.py
-   (I will run any command that needs my API key; tell me exactly what to run.)
+  # download a small config (example), then parametrise DATASET_NAME/TERM in the gift_eval_* scripts
+  /Users/zhangweikun/era/gift-eval/.venv/bin/python -m pip --version  # sanity
+  cd /Users/zhangweikun/era/gift-eval && source .venv/bin/activate
+  hf download Salesforce/GiftEval --repo-type=dataset --include "bizitobs_l2c/*" --local-dir ./data
 
-2. When it finishes, inspect saved_runs/model_ablation/{results.json,summary.md} and the plot,
-   then fold the real numbers into README.md (section 5/6) and
-   implementation/saved_runs/phase3_summary.md, and push to the `repro` remote
-   (git add -A && git commit && git push repro main).
+I (the user) will run anything that spends Gemini calls; DO NOT run Gemini/ERA/best-of-N yourself —
+prepare code + give me exact commands. Keep N small; do not use gemini-2.5-pro. Run GIFT-Eval in a
+normal terminal (native libs segfault under the agent sandbox).
 
-Before running anything, re-verify the current files match the recap (especially llm.py,
-compare_era_vs_bon.py, repeat_era_vs_bon.py, model_ablation.py) and tell me if anything drifted.
-Keep N small (API costs money); do not use gemini-2.5-pro.
+Reminders: GIFT-Eval execution must use /Users/zhangweikun/era/gift-eval/.venv/bin/python and must
+run OUTSIDE the agent sandbox (native libs segfault in-sandbox). Keep N small; do not use
+gemini-2.5-pro. Secondary/optional TODO: the toy-task model_ablation.py (§8) still hasn't been run.
 ```
+
+---
+
+## 13. GIFT-Eval reproduction (Stage C) — the current track
+
+> Goal of Stage C: take ERA beyond toy tabular tasks onto a real public benchmark
+> (**GIFT-Eval**, time-series forecasting), one careful step at a time: **C1** stand up the
+> official benchmark, **C2** wrap one small task as an ERA-scorable reward, **C3** run ERA tree
+> search on it, (**C4+** = ERA-vs-best-of-N + more datasets, not started).
+
+### 13.1 The two-environment rule (critical)
+ERA needs `google-genai` + numpy 2.x; GIFT-Eval pins `gluonts 0.15.1` + numpy 1.26 → they CANNOT
+share an env. So:
+- **ERA env** = system brew Python (`/opt/homebrew/opt/python@3.12/libexec/bin/python`, i.e. plain
+  `python` in a normal login shell). Runs `futs.py`, `llm.py`, `gift_eval_era_search.py`.
+- **GIFT-Eval env** = its own venv `/Users/zhangweikun/era/gift-eval/.venv/bin/python`. Runs the
+  C2 scorer `gift_eval_m4_weekly_task.py` and anything importing `gluonts`/`gift_eval`.
+- **C3 bridges them via `subprocess`**, never by importing GIFT-Eval into the ERA env.
+- The whole `/Users/zhangweikun/era/gift-eval/` clone (repo + `.venv` + downloaded `data/`) is
+  **git-ignored** (`/gift-eval/` in the root `.gitignore`) so it never pollutes the ERA repo.
+
+### 13.2 Locations
+- Official clone: `/Users/zhangweikun/era/gift-eval` (from `SalesforceAIResearch/gift-eval`).
+- GIFT-Eval venv: `/Users/zhangweikun/era/gift-eval/.venv` (Python 3.12.13; `gluonts 0.15.1`,
+  `numpy 1.26.4`, `pandas 2.3.3`, `datasets 2.17.1`, `statsforecast 2.0.3`).
+- Data: only `m4_weekly` downloaded (~1.5 MB) into `/Users/zhangweikun/era/gift-eval/data`;
+  `GIFT_EVAL=...gift-eval/data` set in `gift-eval/.env`. (Full benchmark = 28 dataset families,
+  98 configs — deliberately NOT downloaded.)
+- The task used everywhere in Stage C: **`m4_weekly/W/short`** (359 univariate weekly series,
+  `prediction_length=13`, `windows=1`, `season_length=1`).
+
+### 13.3 C1 — setup + smoke test ✅
+- Installed `pip install -e .` (core) + `statsforecast` (skipped heavy `[baseline]` torch/lightning).
+- Ran the official **Naive** baseline on `m4_weekly` → reproduced `naive.ipynb` EXACTLY:
+  MSE 453525.1459, **MASE 2.7773**, RMSE 673.44, CRPS 0.0609.
+- Artifacts: `implementation/saved_runs/gift_eval_c1_setup/` (`README_C1.md`, `setup_notes.md`,
+  `commands_used.sh`, `environment_info.txt`, `smoke_test_output.txt`, `all_results.csv`,
+  `run_naive_smoke.py`). The smoke script also lives at `gift-eval/run_naive_smoke.py`.
+
+### 13.4 C2 — ERA-scorable task wrapper ✅
+- **`implementation/gift_eval_m4_weekly_task.py`** (run with the **GIFT-Eval venv**). Provides
+  importable `load_task()`, `evaluate_candidate()`, `load_candidate_fn()`, plus a CLI:
+  `--candidates <files...> --out-dir <dir>`.
+- **Candidate interface** (what an LLM generates): a `.py` file defining
+  `forecast(context, prediction_length, freq, metadata=None) -> 1D np.array[prediction_length]`.
+  Only past `context` is given (no leakage). A `FunctionPredictor` adapts the point forecast into a
+  degenerate gluonts `QuantileForecast` (all quantiles = the point) so the official `evaluate_model`
+  metrics still compute.
+- **Reward = `-MASE`** (GIFT-Eval is lower-better; ERA maximises). Invalid candidates (crash, wrong
+  length, NaN/inf, no `forecast`) → `valid=False`, `reward=-inf`, with a clear error string.
+- Baseline candidates + results on `m4_weekly/W/short`:
+  - `candidate_naive` MASE **2.777295** (matches C1 to ~10 s.f.; reward -2.777295)
+  - `candidate_moving_average` MASE 3.420637
+  - `candidate_seasonal_naive` MASE 9.577987
+  - (naive CRPS 0.0634 ≠ C1's 0.0609 — expected: degenerate quantiles collapse CRPS to ND; point
+    metrics MASE/RMSE match. We optimise `-MASE`, so this is fine.)
+- Artifacts: `implementation/saved_runs/gift_eval_c2_task_wrapper/` (`README_C2.md`,
+  `candidate_results.{json,csv}`, `candidate_{naive,seasonal_naive,moving_average}.py`, `logs/`,
+  `commands_used.sh`, `environment_info.txt`, `run_output.txt`).
+
+### 13.5 C3 — ERA tree search over GIFT-Eval (engineering ✅; ERA not yet winning) ⏳
+- **`implementation/gift_eval_era_search.py`** (run with the **ERA env** `python`). It:
+  1. Scores the initial naive candidate locally (no Gemini) → `initial_score = -2.7773`.
+  2. Runs the real `futs.search` (`Problem`/`Solution`/PUCT) for `--iterations` expansions.
+  3. `generate_fn` builds a prompt (full candidate-interface spec + parent code + parent reward),
+     calls `GeminiLLM.draw_sample`, returns a `Solution`. Hard Gemini failure → sentinel invalid
+     candidate (SafeGenerator pattern).
+  4. `execute_fn` writes the candidate to `candidates/cand_NNN.py` and scores it by
+     **subprocess** → `<gift_eval_python> -u <scorer_script> --candidates ... --out-dir ...`,
+     then robustly parses `candidate_results.json` (stdout-regex fallback) → reward.
+  5. Tracks per-candidate `iteration, candidate_id, parent_id, valid, reward, MASE, CRPS, RMSE,
+     error, candidate_path, runtime_s`.
+- **CLI:** `--iterations` (5) · `--model` (`$GEMINI_MODEL` or `gemini-2.5-flash`) · `--out_dir`
+  (`saved_runs/gift_eval_c3_era_smoke`) · `--gift_eval_python` · `--scorer_script` ·
+  `--temperature` (reserved; `llm.py` ignores it) · `--seed` (0) · `--c_puct` (1.0).
+- **Verified WITHOUT Gemini:** `python -m py_compile` passes; the cross-env `score_program()`
+  plumbing was run on the naive seed → reward `-2.777295` (matches C2). Gemini/ERA NOT executed.
+- **Outputs (written by the run):** `results.json`, `progress.csv`, `best_candidate.py`,
+  `initial_candidate.py`, `candidates/`, `candidate_logs/`. Static deliverables already in
+  `implementation/saved_runs/gift_eval_c3_era_smoke/`: `README_C3.md`, `commands_used.sh`,
+  `initial_candidate.py`.
+- **How to run it** (user, manual — spends `--iterations` Gemini calls): see §12 / the C3
+  `commands_used.sh`. Run in a normal terminal (not the sandbox).
+
+### 13.5b C3.1 — prompt postmortem + fixes (done; next run pending)
+- The first **5-iteration smoke ran** (`saved_runs/gift_eval_c3_era_smoke/`) but **ERA did not beat
+  naive** (best stayed at the seed, MASE 2.7773; 1 of 5 candidates invalid). Full analysis:
+  `saved_runs/gift_eval_c3_era_smoke/postmortem.md`.
+- Root causes: open-ended prompt let Gemini drift OFF the strong last-value anchor (it didn't know
+  naive=2.7773 is strong, MA=3.42/seasonal=9.58 are worse); `metadata['season_length']` is **1**
+  (the *metric* seasonality, NOT the data period) and was misused as a seasonal lag → one
+  `IndexError` (`context[len-k+h]`) and degenerate behavior; compounding trend / full-history SES
+  drift away from `last`.
+- **Fixes (in `gift_eval_era_search.py`, C1/C2 untouched):** new default prompt **`conservative_v2`**
+  (states measured baselines, "anchor on naive + small safe edits", warns season_length=1 is not a
+  period, adds indexing-safety rule + a worked conservative template); kept old prompt as
+  `--prompt_version baseline`; added `--initial_candidate PATH`; both recorded in `results.json`.
+- Optional seed `implementation/initial_candidate_conservative.py` (naive + tiny capped damped
+  trend) measured **MASE 2.8039** (slightly worse than naive on MASE, slightly better RMSE) → so
+  **naive stays the default seed**; conservative seed is opt-in via `--initial_candidate`.
+### 13.5c C3 FINAL (done) — ERA tied naive, did not beat it
+- Three runs completed: smoke (5, baseline prompt), iter10 + iter20 (conservative_v2). Consolidated
+  in **`saved_runs/gift_eval_c3_summary/`** (`README_C3_FINAL.md`, `c3_summary_table.csv`,
+  `c3_best_so_far_mase.png`, `build_c3_summary.py`).
+- Results (naive MASE = 2.7772950): best **generated** candidate (excl. seed) — smoke 2.7772950
+  (degenerate exact-naive copy, 1/5 invalid); iter10 2.7773131 (dist 1.8e-5, 0 invalid); iter20
+  **2.7772956 (dist 5.4e-7, 0 invalid)**. Best **including** seed = naive in all runs; ERA never
+  beat naive.
+- Key behaviour: conservative_v2 made Gemini first copy the worked template (MASE 2.8039), then
+  FUTS built an improving chain (iter20 nodes 0→6→7→8→9→10) that shrank the trend weight toward
+  naive (best node uses `weight_naive=0.9999`). So ERA refined *toward* naive correctly; the
+  heuristic optimum here basically *is* naive.
+- **Conclusion:** m4_weekly/W/short is a hard subset for simple hand-written heuristics because
+  naive is near-optimal. conservative_v2 also drove invalid candidates to **0** (vs 1/5 baseline).
+
+### 13.6 C4 — fair ERA vs best-of-N (RUN ✅)
+- **`implementation/gift_eval_compare_era_vs_bon.py`** (ERA env). Reuses C3's `score_program`,
+  `PROMPT_SPECS`, `build_generation_prompt`, `INITIAL_CANDIDATE_CODE` (small backward-compatible
+  refactor of `gift_eval_era_search.py`: `score_program` got optional `candidates_dir`/`logs_dir`;
+  added module-level `build_generation_prompt`).
+- Both methods share model/prompt(conservative_v2)/naive-seed/scorer/reward and spend **N Gemini
+  calls each**; only parent selection differs: **ERA** = FUTS tree-selected parent (can refine);
+  **best-of-N** = always the same naive seed (independent). Seed scored ONCE, shared.
+- **Framing:** naive is near-optimal (per C3), so C4 is a PROCESS comparison, not "beat naive".
+- **Results (naive MASE = 2.77729505; "best generated" = excl. seed):**
+  - **N=10** (`saved_runs/gift_eval_c4_era_vs_bon_N10/`): ERA best gen **2.77729505** (dist 0.0,
+    valid/invalid 10/0) vs best-of-N **2.79541584** (dist 1.81e-2, 10/0). **Winner: ERA.** Neither
+    beat naive.
+  - **N=20** (`saved_runs/gift_eval_c4_era_vs_bon_N20/`): ERA best gen **2.77729505** (dist 0.0,
+    valid/invalid 19/1) vs best-of-N **2.78183119** (dist 4.54e-3, 20/0). **Winner: ERA.** Neither
+    beat naive.
+  - Takeaway: ERA reached naive exactly; best-of-N stayed measurably above. ERA's tree-search
+    refinement > independent sampling even where the baseline is unbeatable by simple heuristics.
+- Outputs per run: `results.json`, `summary.csv`, `progress_era.csv`, `progress_bon.csv`,
+  `era_candidates/`, `bon_candidates/`, `candidate_logs/`, `era_vs_bon_mase.png`, (`README_C4.md`,
+  `commands_used.sh` in N10).
+
+### 13.6 GIFT-Eval gotchas for the next agent
+- Use `hf download ... --include "<dataset>/*"` to add another small dataset (don't pull all 28).
+- `huggingface-cli` is now `hf`; unauthenticated download works (rate-limit warning only).
+- To score any candidate by hand (no Gemini):
+  `/Users/zhangweikun/era/gift-eval/.venv/bin/python -u gift_eval_m4_weekly_task.py --candidates <f.py> --out-dir /tmp/x`.
+- MASE/CRPS/etc. are all **lower-is-better**; ERA reward negates (`-MASE`).

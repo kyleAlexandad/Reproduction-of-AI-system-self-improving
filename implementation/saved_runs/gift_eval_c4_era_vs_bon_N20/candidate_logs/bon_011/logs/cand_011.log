@@ -1,0 +1,13 @@
+{
+  "candidate": "cand_011",
+  "dataset": "m4_weekly/W-SUN/short",
+  "valid": true,
+  "error": null,
+  "runtime_s": 0.168,
+  "MASE": 2.7818311903025763,
+  "CRPS": 0.06349461546118779,
+  "RMSE": 673.0070242355722,
+  "MSE_mean": 452938.45467042003,
+  "MAE": 348.51820288671854,
+  "reward": -2.7818311903025763
+}

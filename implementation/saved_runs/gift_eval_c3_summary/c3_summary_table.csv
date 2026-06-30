@@ -1,0 +1,4 @@
+run,prompt_version,iterations,n_generated,valid,invalid,naive_MASE,best_MASE_incl_seed,best_generated_MASE_excl_seed,distance_to_naive_excl_seed,beat_naive
+"smoke (5, baseline)",,5,5,4,1,2.7772950477470046,2.7772950477470046,2.7772950477470046,0.0,False
+iter10 (conservative),conservative_v2,10,10,10,0,2.7772950477470046,2.7772950477470046,2.7773130604159886,1.8012668983935498e-05,False
+iter20 (conservative),conservative_v2,20,20,20,0,2.7772950477470046,2.7772950477470046,2.77729558832023,5.405732252938833e-07,False

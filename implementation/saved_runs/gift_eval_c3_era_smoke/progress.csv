@@ -1,0 +1,7 @@
+iteration,candidate_id,parent_id,valid,reward,MASE,CRPS,RMSE,runtime_s,candidate_path,error
+0,0,,True,-2.7772950477470046,2.7772950477470046,0.06339865082261592,673.4427680198704,1.214,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_000.py,
+1,1,0,True,-3.738803889859337,3.738803889859337,0.09522912843361754,953.706809413628,1.115,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_001.py,
+2,2,0,True,-5.080684389478772,5.080684389478772,0.08783799240048572,941.8167933162988,0.873,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_002.py,
+3,3,0,False,,,,,0.955,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_003.py,INVALID: candidate raised IndexError: index 2179 is out of bounds for axis 0 with size 2179
+4,4,0,True,-2.7772950477470046,2.7772950477470046,0.06339865082261592,673.4427680198704,1.111,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_004.py,
+5,5,4,True,-4.101784897569185,4.101784897569185,0.11406337494101325,1221.181731494909,1.135,/Users/zhangweikun/era/implementation/saved_runs/gift_eval_c3_era_smoke/candidates/cand_005.py,

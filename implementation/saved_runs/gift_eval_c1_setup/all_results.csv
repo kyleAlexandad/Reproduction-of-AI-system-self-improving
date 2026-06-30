@@ -1,0 +1,2 @@
+dataset,model,eval_metrics/MSE[mean],eval_metrics/MSE[0.5],eval_metrics/MAE[0.5],eval_metrics/MASE[0.5],eval_metrics/MAPE[0.5],eval_metrics/sMAPE[0.5],eval_metrics/MSIS,eval_metrics/RMSE[mean],eval_metrics/NRMSE[mean],eval_metrics/ND[0.5],eval_metrics/mean_weighted_sum_quantile_loss,domain,num_variates
+m4_weekly/W/short,naive,453525.1459181487,453525.1459181487,347.99148275123207,2.777295047362158,0.08937289522218837,0.09161286714732429,26.631225199626535,673.442756229621,0.1226908336142798,0.06339865521526268,0.06087039452311706,Econ/Fin,1

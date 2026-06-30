@@ -1,0 +1,21 @@
+{
+  "dataset": "m4_weekly/W-SUN/short",
+  "prediction_length": 13,
+  "season_length": 1,
+  "reward_definition": "reward = -MASE (lower MASE is better -> higher reward)",
+  "results": [
+    {
+      "candidate": "cand_008",
+      "dataset": "m4_weekly/W-SUN/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.17,
+      "MASE": 2.7778293556045375,
+      "CRPS": 0.06340910923831707,
+      "RMSE": 673.3515447990236,
+      "MSE_mean": 453402.3028832315,
+      "MAE": 348.04886426778097,
+      "reward": -2.7778293556045375
+    }
+  ]
+}

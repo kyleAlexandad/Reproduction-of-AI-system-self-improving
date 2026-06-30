@@ -1,0 +1,2 @@
+candidate,dataset,valid,MASE,CRPS,RMSE,MSE_mean,MAE,reward,runtime_s,error
+cand_003,m4_weekly/W-SUN/short,False,,,,,,,0.023,INVALID: candidate raised IndexError: index 2179 is out of bounds for axis 0 with size 2179

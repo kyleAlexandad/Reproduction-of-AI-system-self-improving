@@ -1,0 +1,4 @@
+method,n_generated,valid,invalid,best_MASE_incl_seed,best_generated_MASE_excl_seed,distance_to_naive_excl_seed,beat_naive,n_unique_programs,n_duplicate_programs,n_unique_valid_MASE
+naive_baseline,0,,,2.7772950477470046,,0.0,,,,
+ERA,10,10,0,2.7772950477470046,2.7772950477470046,0.0,False,10,0,3
+best_of_N,10,10,0,2.7772950477470046,2.7954158445005133,0.01812079675350864,False,10,0,2

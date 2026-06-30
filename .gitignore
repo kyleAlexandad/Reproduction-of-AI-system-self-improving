@@ -8,5 +8,8 @@ __pycache__/
 .venv/
 venv/
 
+# Third-party: official GIFT-Eval clone (separate repo + venv + downloaded data)
+/gift-eval/
+
 # OS
 .DS_Store
