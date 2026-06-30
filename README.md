@@ -20,9 +20,10 @@ This repo runs the official minimal demo, then asks the sharper research questio
 4. [Part 2 — ERA Tree Search vs. Best-of-N](#4-part-2--era-tree-search-vs-best-of-n)
 5. [Reliability — Repeated Runs & Model Ablation](#5-reliability--repeated-runs--model-ablation)
 6. [Phase-3 Summary (中文 / 给导师)](#6-phase-3-summary-中文--给导师)
-7. [How to Run](#7-how-to-run)
-8. [Repository Structure](#8-repository-structure)
-9. [Security Note & Attribution](#9-security-note--attribution)
+7. [Stage 2 — Second Benchmark: Breast Cancer](#7-stage-2--second-benchmark-breast-cancer)
+8. [How to Run](#8-how-to-run)
+9. [Repository Structure](#9-repository-structure)
+10. [Security Note & Attribution](#10-security-note--attribution)
 
 ---
 
@@ -182,7 +183,56 @@ To turn a suggestive single run into a defensible result:
 
 ---
 
-## 7. How to Run
+## 7. Stage 2 — Second Benchmark: Breast Cancer
+
+To test whether ERA **generalizes beyond the original regression demo**, Stage 2 adds a second,
+*different* task: **`sklearn` breast-cancer binary classification** (`playground_breast_cancer.py`).
+It is fully self-contained (`sklearn.datasets.load_breast_cancer`, **no download**). Metric:
+**ROC-AUC** (higher is better). Baseline: a deliberately weak `DecisionTreeClassifier(max_depth=1)`.
+
+### Part 1 — the benchmark runs and ERA improves it
+| | ROC-AUC |
+|---|---|
+| Initial baseline (depth-1 stump) | 0.8468 |
+| **ERA best (10 iterations)** | **0.9886** |
+
+![Breast cancer search progress](implementation/saved_runs/breast_cancer_era/progress.png)
+
+ERA lifted a weak ~0.85 baseline to ~0.99 — the loop **generalizes to a classification task**.
+
+### Part 2 — ERA vs. Best-of-N on breast cancer
+Same fairness contract as Stage 1 (same split / baseline / scorer / model / equal budget), reusing the
+verified task-agnostic search/sampling core. Run with `gemini-2.5-flash` (matching the Part-1 run).
+
+**Single run (N = 10):**
+| | ROC-AUC |
+|---|---|
+| Initial baseline | 0.8468 |
+| **ERA** | **0.9943** ✅ |
+| Best-of-N | 0.9841 |
+| Invalid candidates | ERA 0/10, Best-of-N 0/10 |
+
+![Breast cancer: ERA vs Best-of-N](implementation/saved_runs/breast_cancer_era_vs_bon/era_vs_bon_breast_cancer.png)
+
+**Repeated (N = 10 × 3 repeats): ERA won 3/3.**
+| | ERA | Best-of-N |
+|---|:---:|:---:|
+| Avg final ROC-AUC | **0.9888** | 0.9808 |
+| Wins | **3 / 3** | 0 / 3 |
+| Invalid candidates | 0 / 30 | 0 / 30 |
+
+![Breast cancer repeated curves](implementation/saved_runs/repeated_breast_cancer_era_vs_bon/repeated_curves.png)
+![Breast cancer final best per repeat](implementation/saved_runs/repeated_breast_cancer_era_vs_bon/final_best_scores.png)
+
+**Takeaway:** ERA beats best-of-N on the *second* benchmark too, and consistently (**3/3**). The margin
+is small (~0.008 AUC) because breast cancer is an easy task where best-of-N also reaches ~0.98 — but ERA
+is reliably higher. With `gemini-2.5-flash`, **zero** candidates failed, confirming the Part-1 prompt fix
+(no more `target`-column `KeyError`s). This supports that ERA's tree-search advantage **generalizes
+beyond the first task**.
+
+---
+
+## 8. How to Run
 
 ```bash
 cd implementation
@@ -201,35 +251,51 @@ python repeat_era_vs_bon.py --model gemini-2.5-flash-lite --N 10 --num_repeats 3
 
 # 4) Model ablation: flash-lite vs flash (N=10, 1 repeat each → 40 calls)
 python model_ablation.py
+
+# --- Stage 2: breast-cancer benchmark ---
+# 5) Breast-cancer demo (initial ~0.8468 -> ERA best ~0.99)
+python playground_breast_cancer.py
+
+# 6) Breast-cancer ERA vs best-of-N — single (N=10 → 20 calls)
+python compare_era_vs_bon_breast_cancer.py --n 10
+
+# 7) Breast-cancer repeated (N=10, 3 repeats → 60 calls)
+python repeated_breast_cancer_era_vs_bon.py --n 10 --num_repeats 3
 ```
 
 > 💡 Cost scales as **2 × N × repeats** Gemini calls per comparison run. Keep `N` small.
 
 ---
 
-## 8. Repository Structure
+## 9. Repository Structure
 
 ```
 implementation/
-├── playground_s3e1.py     # official ERA demo (only change: iterations 10 → 30)
-├── futs.py                # Flat UCB Tree Search (FUTS) — unchanged
-├── llm.py                 # Gemini wrapper: transient-error retries + GEMINI_MODEL override
-├── sandbox.py             # local executor (INSECURE — toy reproduction only)
-├── compare_era_vs_bon.py  # ERA vs best-of-N — single fair comparison
-├── repeat_era_vs_bon.py   # repeated comparison + CSV + plots + 中文 summary
-├── model_ablation.py      # flash-lite vs flash ablation
-├── plot_progress.py       # robust progress-figure plotter
+├── playground_s3e1.py                    # Stage-1 official ERA demo (regression)
+├── playground_breast_cancer.py           # Stage-2 benchmark (breast-cancer classification)
+├── futs.py                               # Flat UCB Tree Search (FUTS) — unchanged
+├── llm.py                                # Gemini wrapper: retries + GEMINI_MODEL override
+├── sandbox.py                            # local executor (INSECURE — toy only)
+├── compare_era_vs_bon.py                 # Stage-1 ERA vs best-of-N (single)
+├── repeat_era_vs_bon.py                  # Stage-1 repeated comparison
+├── model_ablation.py                     # flash-lite vs flash ablation
+├── compare_era_vs_bon_breast_cancer.py   # Stage-2 ERA vs best-of-N (single)
+├── repeated_breast_cancer_era_vs_bon.py  # Stage-2 repeated comparison
+├── plot_progress.py                      # robust progress-figure plotter
 └── saved_runs/
-    ├── playground_s3e1_iter30/   # Part-1 report (.tex/.pdf) + progress figures
-    ├── era_vs_bon/               # Part-2 report (.tex/.pdf) + figures + results.json
-    ├── repeated_era_vs_bon/      # (generated by repeat_era_vs_bon.py)
-    ├── model_ablation/           # (generated by model_ablation.py)
-    └── phase3_summary.md         # advisor summary (中文)
+    ├── playground_s3e1_iter30/              # Stage-1 Part-1 report + figures
+    ├── era_vs_bon/                          # Stage-1 Part-2 report + figures
+    ├── repeated_era_vs_bon/                 # Stage-1 repeated results
+    ├── breast_cancer_era/                   # Stage-2 demo: progress + best code/score
+    ├── breast_cancer_era_vs_bon/            # (generated by Stage-2 single comparison)
+    ├── repeated_breast_cancer_era_vs_bon/   # (generated by Stage-2 repeated comparison)
+    ├── model_ablation/                      # (generated by model_ablation.py)
+    └── phase3_summary.md                    # advisor summary (中文)
 ```
 
 ---
 
-## 9. Security Note & Attribution
+## 10. Security Note & Attribution
 
 - ⚠️ **`sandbox.py` is not a secure sandbox.** It executes LLM-generated Python directly with your
   user permissions. Toy reproduction only — use real isolation (Docker / firejail / gVisor / a VM)
