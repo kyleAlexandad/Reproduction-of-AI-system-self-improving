@@ -1,0 +1,4 @@
+repeat_id,model,N,initial_score,era_final_best,bon_final_best,winner,era_failures,bon_failures
+0,gemini-2.5-flash-lite,10,-0.7339448894714724,-0.5809973122403245,-0.601676837357881,ERA,3,2
+1,gemini-2.5-flash-lite,10,-0.7339448894714724,-0.5910203047558055,-0.608436631884947,ERA,1,5
+2,gemini-2.5-flash-lite,10,-0.7339448894714724,-0.5749819981616413,-0.6071432216239024,ERA,2,3

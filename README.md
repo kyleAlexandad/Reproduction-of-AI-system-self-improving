@@ -134,8 +134,25 @@ To turn a suggestive single run into a defensible result:
   and writes `results.json`, `model_ablation.{png,pdf}`, and a Chinese `summary.md`.
   *Gemini Pro is intentionally never the default.*
 
-> Outputs appear under `implementation/saved_runs/repeated_era_vs_bon/` and
-> `implementation/saved_runs/model_ablation/` after you run them.
+### Repeated-run result (`gemini-2.5-flash-lite`, N = 10, 3 repeats)
+
+**ERA won all 3 repeats** — the single-run advantage holds up.
+
+| Repeat | ERA final | Best-of-N final | Winner |
+|:------:|:---------:|:---------------:|:------:|
+| 0 | −0.5810 | −0.6017 | **ERA** |
+| 1 | −0.5910 | −0.6084 | **ERA** |
+| 2 | −0.5750 | −0.6071 | **ERA** |
+| **Average** | **−0.5823** | **−0.6058** | **ERA (3/3)** |
+
+- **Average gap:** ERA is **+0.0234** higher (neg RMSE) than best-of-N.
+- **Failed candidates:** ERA **6/30 (20%)** vs best-of-N **10/30 (33%)** — best-of-N fails more, consistent with the single-run finding.
+
+![Repeated running-best curves](implementation/saved_runs/repeated_era_vs_bon/repeated_curves.png)
+![Final best per repeat](implementation/saved_runs/repeated_era_vs_bon/final_best_scores.png)
+
+> The `model_ablation.py` outputs appear under `implementation/saved_runs/model_ablation/` once you run it.
+> Full Chinese write-up: [`implementation/saved_runs/repeated_era_vs_bon/summary.md`](implementation/saved_runs/repeated_era_vs_bon/summary.md).
 
 ---
 
@@ -145,12 +162,12 @@ To turn a suggestive single run into a defensible result:
 - **成功复现官方 ERA 最小 Demo**：打通 LLM 生成/改写代码 → 本地沙箱执行 → 自动打分（负 RMSE）→ 树搜索迭代 的完整闭环。
 - **绘制搜索进度图**：初始 `-0.7339`，10 次迭代约 `-0.5785`，30 次迭代 `-0.5776`。
 - **实现 ERA vs best-of-N 对照实验**（相同预算 N=20，`flash-lite`）：ERA 最终 `-0.5735`、best-of-N 最终 `-0.6149`，**ERA 获胜**；且 ERA 仅 3/20 个失败候选，best-of-N 有 13/20 个，**ERA 明显更稳定**。
-- **新增重复运行评估与模型消融脚本**，把"单次结果"升级为更可信的小规模实验。
+- **运行了重复评估实验**（`flash-lite`，N=10，3 次）：**ERA 3/3 全胜**，平均 `-0.5823` vs best-of-N `-0.6058`；失败率 20% vs 33%。
 
 ### 当前结论
 - ERA 的核心闭环已被验证，系统能稳定运行并自我改进。
 - 玩具任务**很快进入平台期**（10→30 次迭代提升极小），绝对差距有限。
-- **ERA vs best-of-N 是更有意义的验证**：相同预算下 ERA 分数更高、失败更少；但单次运行噪声较大，需要重复实验确认。
+- **ERA 稳定优于 best-of-N**：重复 3 次中 ERA 全胜（3/3），平均分数更高、失败更少，说明该优势不是单次运行的偶然；玩具任务绝对差距有限，后续可增大 N / 重复次数进一步确认。
 
 ### 模型建议
 - **继续用 `gemini-2.5-flash-lite`** 做便宜的重复实验（脚本默认）。
