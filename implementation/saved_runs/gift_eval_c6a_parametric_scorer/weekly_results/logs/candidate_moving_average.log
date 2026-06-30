@@ -1,0 +1,13 @@
+{
+  "candidate": "candidate_moving_average",
+  "dataset": "m4_weekly/W/short",
+  "valid": true,
+  "error": null,
+  "runtime_s": 0.157,
+  "MASE": 3.4206366271973376,
+  "CRPS": 0.07839678387688769,
+  "RMSE": 802.6817036155301,
+  "MSE_mean": 644297.9173191296,
+  "MAE": 430.3153272197209,
+  "reward": -3.4206366271973376
+}

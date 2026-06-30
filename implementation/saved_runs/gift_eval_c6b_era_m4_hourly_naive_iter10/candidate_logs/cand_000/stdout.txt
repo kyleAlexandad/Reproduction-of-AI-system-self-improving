@@ -1,0 +1,20 @@
+Loading task: dataset=m4_hourly term=short
+config=m4_hourly/H/short  freq=H  pred_len=48  windows=1  season_len(metric)=24  target_dim=1
+
+=== Evaluating cand_000.py ===
+  valid=True  MASE=11.607688  CRPS=0.166293  RMSE=7585.7131  reward=-11.607688  (0.174s)
+
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c6b_era_m4_hourly_naive_iter10/candidate_logs/cand_000/candidate_results.json
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c6b_era_m4_hourly_naive_iter10/candidate_logs/cand_000/candidate_results.csv
+
+--- STDERR ---
+/Users/zhangweikun/era/gift-eval/.venv/lib/python3.12/site-packages/gluonts/time_feature/seasonality.py:47: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  offset = pd.tseries.frequencies.to_offset(freq)
+/Users/zhangweikun/era/gift-eval/src/gift_eval/data.py:151: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  freq = norm_freq_str(to_offset(self.freq).name)
+/Users/zhangweikun/era/gift-eval/.venv/lib/python3.12/site-packages/gluonts/dataset/common.py:263: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  return pd.Period(val, freq)
+
+0it [00:00, ?it/s]
+414it [00:00, 2437.04it/s]
+414it [00:00, 2436.05it/s]

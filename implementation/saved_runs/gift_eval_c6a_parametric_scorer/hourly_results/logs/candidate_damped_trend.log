@@ -1,0 +1,13 @@
+{
+  "candidate": "candidate_damped_trend",
+  "dataset": "m4_hourly/H/short",
+  "valid": true,
+  "error": null,
+  "runtime_s": 0.187,
+  "MASE": 12.037122257584974,
+  "CRPS": 0.1649125446666542,
+  "RMSE": 7389.138133216147,
+  "MSE_mean": 54599362.351749,
+  "MAE": 1207.9551781213845,
+  "reward": -12.037122257584974
+}

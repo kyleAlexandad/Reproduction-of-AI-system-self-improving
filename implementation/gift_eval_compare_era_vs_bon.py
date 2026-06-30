@@ -57,23 +57,29 @@ from llm import GeminiLLM, DEFAULT_MODEL
 
 # Reuse the C3 building blocks (single source of truth).
 from gift_eval_era_search import (
-    DATASET_CONFIG,
-    PREDICTION_LENGTH,
+    DEFAULT_DATASET,
+    DEFAULT_FREQ,
+    DEFAULT_TERM,
+    KNOWN_HORIZON,
+    PROMPT_VERSIONS,
     DEFAULT_GIFT_EVAL_PYTHON,
     DEFAULT_SCORER_SCRIPT,
-    INITIAL_CANDIDATE_CODE,
-    PROBLEM_DESCRIPTION,
-    PROMPT_SPECS,
     build_generation_prompt,
+    dataset_config,
+    resolve_seed,
+    SEED_CHOICES,
+    problem_description,
     score_program,
 )
 
 SENTINEL_INVALID = "# generation failed - intentionally invalid candidate (no forecast)\n"
 
 
-def generate_candidate(llm, prompt_version, parent_program, parent_score):
+def generate_candidate(llm, prompt_version, parent_program, parent_score,
+                       dataset, freq, term, horizon):
     """Draw one candidate from Gemini; on hard failure return a sentinel invalid program."""
-    prompt = build_generation_prompt(prompt_version, parent_program, parent_score)
+    prompt = build_generation_prompt(prompt_version, parent_program, parent_score,
+                                     dataset=dataset, freq=freq, term=term, horizon=horizon)
     try:
         return llm.draw_sample(prompt)
     except Exception as e:  # SafeGenerator behaviour
@@ -98,7 +104,7 @@ def _rec(iteration, cid, parent_id, res):
     }
 
 
-def run_era(llm, args, out_dir, seed_code, seed_res):
+def run_era(llm, args, out_dir, seed_code, seed_res, scorer_args, horizon):
     """Method A: FUTS tree search for N expansions, conditioning on tree-selected parents."""
     gift_py, scorer = args.gift_eval_python, args.scorer_script
     cand_dir = out_dir / "era_candidates"
@@ -112,7 +118,8 @@ def run_era(llm, args, out_dir, seed_code, seed_res):
 
     def generate_fn(problem, parent_solution, parent_score):
         parent_id = sol_to_id.get(id(parent_solution))
-        code = generate_candidate(llm, args.prompt_version, parent_solution.program, parent_score)
+        code = generate_candidate(llm, args.prompt_version, parent_solution.program, parent_score,
+                                  args.dataset, args.freq, args.term, horizon)
         sol = futs.Solution(code)
         cid = nid["v"]; nid["v"] += 1
         sol_to_id[id(sol)] = cid
@@ -129,6 +136,7 @@ def run_era(llm, args, out_dir, seed_code, seed_res):
             solution.program, cid, out_dir, gift_py, scorer,
             candidates_dir=cand_dir,
             logs_dir=out_dir / "candidate_logs" / f"era_{cid:03d}",
+            scorer_extra_args=scorer_args,
         )
         records.append(_rec(cid, cid, parent_id, res))
         status = "valid" if res["valid"] else f"INVALID ({str(res['error'])[:50]})"
@@ -137,7 +145,7 @@ def run_era(llm, args, out_dir, seed_code, seed_res):
 
     print(f"\n=== Method A: ERA tree search (N={args.N}) ===")
     futs.search(
-        problem=futs.Problem(PROBLEM_DESCRIPTION),
+        problem=futs.Problem(problem_description(args.dataset, args.freq, args.term, horizon)),
         initial_solution=seed_sol,
         initial_score=seed_score,
         generate_fn=generate_fn,
@@ -148,8 +156,8 @@ def run_era(llm, args, out_dir, seed_code, seed_res):
     return records
 
 
-def run_bon(llm, args, out_dir, seed_code, seed_res):
-    """Method B: best-of-N independent sampling, always from the SAME initial naive seed."""
+def run_bon(llm, args, out_dir, seed_code, seed_res, scorer_args, horizon):
+    """Method B: best-of-N independent sampling, always from the SAME initial seed."""
     gift_py, scorer = args.gift_eval_python, args.scorer_script
     cand_dir = out_dir / "bon_candidates"
     records = [_rec(0, 0, None, seed_res)]
@@ -157,12 +165,14 @@ def run_bon(llm, args, out_dir, seed_code, seed_res):
 
     print(f"\n=== Method B: best-of-N independent sampling (N={args.N}) ===")
     for i in range(1, args.N + 1):
-        # Always condition on the identical initial naive seed (never on prior candidates).
-        code = generate_candidate(llm, args.prompt_version, seed_code, seed_score)
+        # Always condition on the identical initial seed (never on prior candidates).
+        code = generate_candidate(llm, args.prompt_version, seed_code, seed_score,
+                                  args.dataset, args.freq, args.term, horizon)
         res = score_program(
             code, i, out_dir, gift_py, scorer,
             candidates_dir=cand_dir,
             logs_dir=out_dir / "candidate_logs" / f"bon_{i:03d}",
+            scorer_extra_args=scorer_args,
         )
         records.append(_rec(i, i, 0, res))
         status = "valid" if res["valid"] else f"INVALID ({str(res['error'])[:50]})"
@@ -201,8 +211,10 @@ def method_stats(records, naive_mase, cand_dir):
         "invalid": len(invalid),
         "best_MASE_incl_seed": best_incl_seed,
         "best_generated_MASE_excl_seed": best_gen,
-        "distance_to_naive_excl_seed": (best_gen - naive_mase) if best_gen is not None else None,
-        "beat_naive": (best_gen is not None and best_gen < naive_mase),
+        # delta_vs_seed = best generated MASE - seed MASE. NEGATIVE means the method IMPROVED on the
+        # seed (lower MASE is better). For m4_hourly the seed is naive, so negative = beat naive.
+        "delta_vs_seed": (best_gen - naive_mase) if best_gen is not None else None,
+        "beat_seed": (best_gen is not None and best_gen < naive_mase),
         "n_unique_programs": n_unique_programs,
         "n_duplicate_programs": n_dup_programs,
         "n_unique_valid_MASE": n_unique_mase,
@@ -222,8 +234,18 @@ def main():
                         help="Candidates per method (Gemini calls per method). Total = 2*N.")
     parser.add_argument("--model", default=os.environ.get("GEMINI_MODEL", DEFAULT_MODEL))
     parser.add_argument("--out_dir", default="saved_runs/gift_eval_c4_era_vs_bon_N10")
+    parser.add_argument("--dataset", default=DEFAULT_DATASET,
+                        help="GIFT-Eval dataset (e.g. m4_weekly, m4_hourly, hospital).")
+    parser.add_argument("--freq", default=DEFAULT_FREQ, help="Frequency label, e.g. W/H/M.")
+    parser.add_argument("--term", default=DEFAULT_TERM, choices=["short", "medium", "long"])
+    parser.add_argument("--initial_seed", default="naive", choices=SEED_CHOICES,
+                        help="Built-in shared seed. Default 'naive' (weak baseline) for EVERY "
+                             "dataset; 'seasonal_naive' is an optional strong-baseline run. "
+                             "Overridden by --initial_candidate if given.")
+    parser.add_argument("--initial_candidate", default=None,
+                        help="Path to a .py seed candidate (overrides --initial_seed).")
     parser.add_argument("--prompt_version", default="conservative_v2",
-                        choices=sorted(PROMPT_SPECS.keys()))
+                        choices=PROMPT_VERSIONS)
     parser.add_argument("--gift_eval_python", default=DEFAULT_GIFT_EVAL_PYTHON)
     parser.add_argument("--scorer_script", default=DEFAULT_SCORER_SCRIPT)
     parser.add_argument("--seed", type=int, default=0)
@@ -252,34 +274,49 @@ def main():
     for sub in ("era_candidates", "bon_candidates", "candidate_logs"):
         (out_dir / sub).mkdir(exist_ok=True)
 
+    # Dataset context.
+    scorer_args = ["--dataset", args.dataset, "--freq", args.freq, "--term", args.term]
+    ds_config = dataset_config(args.dataset, args.freq, args.term)
+    horizon = KNOWN_HORIZON.get(args.dataset)
+
+    # Resolve the shared seed candidate. Default = naive (weak baseline) for ALL datasets;
+    # --initial_candidate (a file path) overrides --initial_seed if provided.
+    if args.initial_candidate:
+        seed_code = Path(args.initial_candidate).read_text()
+        seed_name = Path(args.initial_candidate).name
+    else:
+        seed_name, seed_code = resolve_seed(args.initial_seed)
+
     print(f"Out dir:        {out_dir}")
+    print(f"Dataset:        {ds_config}")
     print(f"Model:          {args.model}")
     print(f"N per method:   {args.N}   (total Gemini calls = {2*args.N})")
     print(f"Prompt version: {args.prompt_version}")
+    print(f"Shared seed:    {seed_name}")
     print(f"Reward:         -MASE (higher is better)\n")
 
     llm = GeminiLLM(api_key, model_name=args.model)
 
-    # --- Score the shared naive seed ONCE (deterministic; reused as the floor for both methods) ---
-    seed_code = INITIAL_CANDIDATE_CODE
+    # --- Score the shared seed ONCE (deterministic; reused as the floor for both methods) ---
     (out_dir / "initial_candidate.py").write_text(seed_code)
-    print("=== Scoring shared naive seed ===")
+    print(f"=== Scoring shared seed ({seed_name}) ===")
     seed_res = score_program(
         seed_code, 0, out_dir, args.gift_eval_python, args.scorer_script,
         candidates_dir=out_dir / "era_candidates",
         logs_dir=out_dir / "candidate_logs" / "seed",
+        scorer_extra_args=scorer_args,
     )
     if not seed_res["valid"]:
         print(f"[!] Seed did not score valid: {seed_res['error']}. Aborting before Gemini calls.")
         sys.exit(1)
     naive_mase = seed_res["MASE"]
-    print(f"  naive seed MASE = {naive_mase}\n")
+    print(f"  seed MASE = {naive_mase}\n")
     # mirror the seed file into bon_candidates for a self-contained layout
     (out_dir / "bon_candidates" / "cand_000.py").write_text(seed_code)
 
     # --- Run both methods (equal budget) ---
-    era_records = run_era(llm, args, out_dir, seed_code, seed_res)
-    bon_records = run_bon(llm, args, out_dir, seed_code, seed_res)
+    era_records = run_era(llm, args, out_dir, seed_code, seed_res, scorer_args, horizon)
+    bon_records = run_bon(llm, args, out_dir, seed_code, seed_res, scorer_args, horizon)
 
     era = method_stats(era_records, naive_mase, out_dir / "era_candidates")
     bon = method_stats(bon_records, naive_mase, out_dir / "bon_candidates")
@@ -321,13 +358,13 @@ def main():
         w = csv.writer(f)
         w.writerow(["method", "n_generated", "valid", "invalid",
                     "best_MASE_incl_seed", "best_generated_MASE_excl_seed",
-                    "distance_to_naive_excl_seed", "beat_naive",
+                    "delta_vs_seed(neg=better)", "beat_seed",
                     "n_unique_programs", "n_duplicate_programs", "n_unique_valid_MASE"])
-        w.writerow(["naive_baseline", 0, "", "", naive_mase, "", 0.0, "", "", "", ""])
+        w.writerow(["seed_baseline", 0, "", "", naive_mase, "", 0.0, "", "", "", ""])
         for name, s in (("ERA", era), ("best_of_N", bon)):
             w.writerow([name, s["n_generated"], s["valid"], s["invalid"],
                         s["best_MASE_incl_seed"], s["best_generated_MASE_excl_seed"],
-                        s["distance_to_naive_excl_seed"], s["beat_naive"],
+                        s["delta_vs_seed"], s["beat_seed"],
                         s["n_unique_programs"], s["n_duplicate_programs"],
                         s["n_unique_valid_MASE"]])
 
@@ -337,16 +374,18 @@ def main():
                 for k, v in s.items()}
 
     results = {
-        "dataset": DATASET_CONFIG,
-        "prediction_length": PREDICTION_LENGTH,
+        "dataset": ds_config,
+        "prediction_length": horizon,
+        "seed_candidate": seed_name,
         "model": args.model,
         "prompt_version": args.prompt_version,
         "N_per_method": args.N,
         "total_gemini_calls": 2 * args.N,
         "reward_definition": "reward = -MASE (lower MASE -> higher reward)",
-        "naive_baseline_MASE": naive_mase,
+        "seed_baseline_MASE": naive_mase,
         "winner_by_best_generated_MASE": winner_excl_seed,
-        "either_beat_naive": bool(era["beat_naive"] or bon["beat_naive"]),
+        "either_beat_seed": bool(era["beat_seed"] or bon["beat_seed"]),
+        "delta_vs_seed_note": "delta_vs_seed = best_generated_MASE - seed_MASE; NEGATIVE = improvement",
         "ERA": clean(era),
         "best_of_N": clean(bon),
         "era_records": [{**r, "reward": _safe(r["reward"])} for r in era_records],
@@ -362,8 +401,8 @@ def main():
             color="#ff7f0e", marker="s", markersize=4, linewidth=1.9,
             label="Best-of-N independent")
     ax.axhline(naive_mase, color="#d62728", linestyle="--", linewidth=1.3,
-               label=f"naive baseline (MASE {naive_mase:.5f})")
-    ax.set_title(f"C4: ERA vs Best-of-N on GIFT-Eval {DATASET_CONFIG}\n"
+               label=f"seed baseline (MASE {naive_mase:.5f})")
+    ax.set_title(f"C4: ERA vs Best-of-N on GIFT-Eval {ds_config}\n"
                  f"best generated-candidate MASE so far (N={args.N}, lower is better)",
                  fontsize=12, fontweight="bold")
     ax.set_xlabel("Candidate index (generated, excluding seed)")
@@ -375,22 +414,22 @@ def main():
     fig.savefig(out_dir / "era_vs_bon_mase.pdf")
 
     # --- Console summary ---
-    print("\n================ C4 SUMMARY ================")
-    print(f"Dataset:            {DATASET_CONFIG}   Model: {args.model}   N/method: {args.N}")
-    print(f"Naive baseline MASE: {naive_mase:.8f}")
+    print("\n======= GIFT-Eval ERA vs Best-of-N Summary =======")
+    print(f"Dataset:            {ds_config}   Model: {args.model}   N/method: {args.N}")
+    print(f"Seed baseline MASE: {naive_mase:.8f}")
     for name, s in (("ERA", era), ("Best-of-N", bon)):
         bg = s["best_generated_MASE_excl_seed"]
-        d = s["distance_to_naive_excl_seed"]
+        d = s["delta_vs_seed"]
         print(f"{name:10s} best(incl seed)={s['best_MASE_incl_seed']:.8f}  "
               f"best gen(excl seed)={bg if bg is None else round(bg,8)}  "
-              f"dist_to_naive={d if d is None else format(d,'.2e')}  "
+              f"delta_vs_seed={d if d is None else format(d,'.4f')} (neg=better)  "
               f"valid/invalid={s['valid']}/{s['invalid']}  "
               f"dup_programs={s['n_duplicate_programs']}")
     print(f"Winner (lower best generated MASE): {winner_excl_seed}")
-    print(f"Either beat naive: {results['either_beat_naive']}")
+    print(f"Either beat seed: {results['either_beat_seed']}")
     print(f"Wrote: {out_dir/'results.json'}, summary.csv, progress_era.csv, progress_bon.csv, "
           f"era_vs_bon_mase.png")
-    print("============================================")
+    print("==================================================")
 
 
 if __name__ == "__main__":

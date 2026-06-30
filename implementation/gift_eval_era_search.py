@@ -63,17 +63,20 @@ from llm import GeminiLLM, DEFAULT_MODEL
 
 # --- Defaults (match the C1/C2 setup) ----------------------------------------------------
 DEFAULT_GIFT_EVAL_PYTHON = "/Users/zhangweikun/era/gift-eval/.venv/bin/python"
-DEFAULT_SCORER_SCRIPT = (
-    "/Users/zhangweikun/era/implementation/gift_eval_m4_weekly_task.py"
-)
+DEFAULT_SCORER_SCRIPT = "/Users/zhangweikun/era/implementation/gift_eval_task.py"
 DEFAULT_OUT_DIR = "saved_runs/gift_eval_c3_era_smoke"
 
-DATASET_CONFIG = "m4_weekly/W/short"
-PREDICTION_LENGTH = 13
-FREQ = "W"
+DEFAULT_DATASET = "m4_weekly"
+DEFAULT_FREQ = "W"
+DEFAULT_TERM = "short"
 
-# The C2 naive baseline -- the initial candidate (reward ~ -2.777295).
-INITIAL_CANDIDATE_CODE = '''\
+# GIFT-Eval horizons for known configs (prompt text only; the scorer derives the real value).
+KNOWN_HORIZON = {"m4_weekly": 13, "m4_hourly": 48, "hospital": 12}
+
+PROMPT_VERSIONS = ["baseline", "conservative_v2"]
+
+# ------------------------------- built-in seed candidates --------------------------------
+NAIVE_SEED_CODE = '''\
 import numpy as np
 
 
@@ -84,18 +87,75 @@ def forecast(context, prediction_length, freq, metadata=None):
     return np.repeat(context[-1], prediction_length)
 '''
 
-PROBLEM_DESCRIPTION = (
-    "Improve a univariate time-series forecasting function for the GIFT-Eval "
-    f"`{DATASET_CONFIG}` task (weekly data, forecast horizon {PREDICTION_LENGTH}). "
-    "The reward is -MASE (higher is better)."
-)
+SEASONAL_NAIVE_SEED_CODE = '''\
+import numpy as np
 
-# --- The candidate-interface prompt shown to Gemini --------------------------------------
-# Shared interface contract (identical across prompt versions).
-BASE_INTERFACE_SPEC = f'''\
-TASK: GIFT-Eval `{DATASET_CONFIG}` -- weekly univariate time-series forecasting.
-For each series you are given its past values and must forecast the next {PREDICTION_LENGTH} steps
-(the horizon is EXACTLY {PREDICTION_LENGTH}; freq is weekly, "{FREQ}").
+_SEASON = {"S": 60, "T": 60, "H": 24, "D": 7, "W": 52, "M": 12, "Q": 4, "A": 1, "Y": 1}
+
+
+def forecast(context, prediction_length, freq, metadata=None):
+    context = np.asarray(context, dtype=float)
+    n = len(context)
+    if n == 0:
+        return np.zeros(prediction_length)
+    base = str(freq).upper().split("-")[0].lstrip("0123456789") or str(freq).upper()
+    season = 1
+    for k, p in _SEASON.items():
+        if base.startswith(k):
+            season = p
+            break
+    if season > 1 and n >= season:
+        last_season = context[-season:]
+        reps = int(np.ceil(prediction_length / season))
+        return np.tile(last_season, reps)[:prediction_length].astype(float)
+    return np.full(prediction_length, float(context[-1]))
+'''
+
+# Backward-compatible alias (imported by gift_eval_compare_era_vs_bon).
+INITIAL_CANDIDATE_CODE = NAIVE_SEED_CODE
+# Backward-compatible module-level defaults (some importers still reference these).
+DATASET_CONFIG = f"{DEFAULT_DATASET}/{DEFAULT_FREQ}/{DEFAULT_TERM}"
+PREDICTION_LENGTH = KNOWN_HORIZON[DEFAULT_DATASET]
+
+
+# Built-in seed candidates, selected via --initial_seed (default "naive").
+SEED_LIBRARY = {
+    "naive": ("naive (built-in last-value)", NAIVE_SEED_CODE),
+    "seasonal_naive": ("seasonal_naive (built-in, period from freq)", SEASONAL_NAIVE_SEED_CODE),
+}
+SEED_CHOICES = list(SEED_LIBRARY.keys())
+
+
+def resolve_seed(initial_seed):
+    """Return (name, code) for a built-in seed name. Default to naive for unknown names.
+
+    NOTE: the default seed is ALWAYS the weak last-value naive baseline, for EVERY dataset
+    (including m4_hourly). The main experiment asks whether ERA can improve from naive and discover
+    seasonal behaviour on its own; use --initial_seed seasonal_naive only for an optional
+    strong-baseline / oracle comparison.
+    """
+    return SEED_LIBRARY.get(initial_seed, SEED_LIBRARY["naive"])
+
+
+def dataset_config(dataset, freq, term):
+    return f"{dataset}/{freq}/{term}"
+
+
+def problem_description(dataset, freq, term, horizon=None):
+    h = horizon if horizon is not None else KNOWN_HORIZON.get(dataset)
+    h_txt = f"forecast horizon {h}" if h else "the GIFT-Eval horizon for this config"
+    return ("Improve a univariate time-series forecasting function for the GIFT-Eval "
+            f"`{dataset_config(dataset, freq, term)}` task (freq {freq}, {h_txt}). "
+            "The reward is -MASE (higher is better).")
+
+
+# --- The candidate-interface prompt shown to Gemini (dataset-parametric) ------------------
+def _base_interface_spec(dataset, freq, term, horizon):
+    h = str(horizon) if horizon else "the GIFT-Eval horizon (passed in as prediction_length)"
+    return f'''\
+TASK: GIFT-Eval `{dataset_config(dataset, freq, term)}` -- univariate time-series forecasting (freq "{freq}").
+For each series you are given its past values and must forecast the next prediction_length steps
+(horizon = {h}).
 
 Write a SINGLE Python function with EXACTLY this signature:
 
@@ -104,13 +164,11 @@ Write a SINGLE Python function with EXACTLY this signature:
 
 INPUTS:
   - context: a 1D numpy array of the PAST target values for one series (history only).
-  - prediction_length: int, the forecast horizon (will be {PREDICTION_LENGTH}).
-  - freq: a frequency string, e.g. "{FREQ}".
-  - metadata: an optional dict that may contain item_id, season_length, context_length,
-    prediction_length, freq.
-    IMPORTANT: metadata['season_length'] is the METRIC seasonality used by the scorer and equals 1
-    for this weekly task. It is NOT the data's real seasonal period. Do NOT use it as a seasonal
-    lag (doing so, e.g. context[len(context) - season_length + h], overflows the array).
+  - prediction_length: int, the forecast horizon.
+  - freq: a frequency string, e.g. "{freq}".
+  - metadata: an optional dict (item_id, season_length, context_length, prediction_length, freq).
+    NOTE: metadata['season_length'] is the METRIC seasonality the scorer uses for MASE scaling; it
+    is NOT necessarily the data's seasonal period. Do not blindly use it as a lag.
 
 OUTPUT:
   - Return a 1D numpy array of length EXACTLY prediction_length with the point forecasts.
@@ -126,20 +184,19 @@ HARD REQUIREMENTS (a violation makes the candidate invalid, reward = -inf):
   8. Handle SHORT context arrays robustly (length 0, 1, or a few points) with sane fallbacks.
   9. INDEXING SAFETY: never write patterns like context[len(context) - k + h] that can run past the
      end of the array. Prefer slicing from the END (context[-k:]) and bound-check BOTH ends.
-     (A previous candidate crashed with IndexError doing exactly this.)
 '''
 
-# v1 ("baseline"): the original open-ended strategy list (kept for A/B comparison).
+# v1 ("baseline"): open-ended strategy list (dataset-agnostic; kept for A/B comparison).
 BASELINE_STRATEGY = '''\
 OBJECTIVE: reward = `-MASE` (negated Mean Absolute Scaled Error), so HIGHER reward is better
 (you want the SMALLEST MASE). Produce a function expected to beat the parent shown below.
 
 STRATEGY IDEAS you may use or combine (be creative, but keep it robust):
-  - last-value naive (strong baseline for weekly random-walk-like series)
+  - last-value naive
   - moving average / weighted moving average of recent points
   - linear or robust trend extrapolation (with damping to avoid runaway forecasts)
   - exponential smoothing / robust smoothing
-  - seasonal lag (e.g. weekly seasonal period) IF there is enough history, else fallback
+  - seasonal lag (use the data's natural period) IF there is enough history, else fallback
   - small ensembles / blends of the above
   - clipping extreme forecasts to the recent observed range
   - explicit fallback rules for very short series
@@ -148,35 +205,21 @@ Return ONLY the Python code for the `forecast` function (plus any imports it nee
 Do not include explanations, examples, tests, or a __main__ block.
 '''
 
-# v2 ("conservative_v2"): anchored on the measured baselines; pushes SMALL, SAFE edits to naive.
-CONSERVATIVE_STRATEGY = f'''\
-OBJECTIVE: reward = `-MASE` (negated Mean Absolute Scaled Error), so HIGHER reward means LOWER MASE.
-You want the SMALLEST possible MASE.
-
+# v2 ("conservative_v2"): per-dataset facts measured by C5. Anchors on the RIGHT strong baseline.
+_FACTS_M4_WEEKLY = '''\
 CRITICAL BENCHMARK FACTS (measured on THIS exact task -- trust them):
-  - This is GIFT-Eval {DATASET_CONFIG}. Prediction horizon = {PREDICTION_LENGTH}.
-  - Reward = -MASE, so higher reward means lower MASE.
+  - This is GIFT-Eval m4_weekly/W/short, WEEKLY data, horizon 13.
   - The NAIVE last-value baseline is STRONG here: MASE ~= 2.7773. Beating it is genuinely hard.
-  - In baseline tests on this task:
-      * moving average was WORSE:       MASE ~= 3.4206
-      * seasonal naive was MUCH WORSE:  MASE ~= 9.5780
-  - These weekly series behave close to a RANDOM WALK: the last observed value is the single best
-    simple predictor. A 52-week seasonal lag and aggressive/long trend extrapolation HURT badly.
+  - moving average was WORSE (~3.4206); seasonal naive was MUCH WORSE (~9.5780).
+  - These weekly series behave close to a RANDOM WALK: the last value is the best simple predictor;
+    a 52-week seasonal lag and aggressive trend extrapolation HURT.
 
-THEREFORE -- BE CONSERVATIVE. Do NOT blindly replace naive with moving average, seasonal naive, or
-aggressive trend extrapolation. Treat last-value naive as the ANCHOR and make only SMALL, SAFE
-corrections on top of it.
-
-RECOMMENDED CONSERVATIVE STRATEGIES:
-  - Keep last-value naive as the backbone and the fallback.
-  - Add at most a SMALL damped trend, and only when the recent trend is stable and small. Heavily
-    damp it (e.g. phi <= 0.7) and CAP the per-step change to a small fraction of the recent scale,
-    so forecasts cannot run away from the last value.
-  - Use robust clipping: keep forecasts inside a band around recent observations
-    (e.g. recent min/max +/- a small margin).
-  - Prefer conservative ensembles/blends where NAIVE keeps a HIGH weight (e.g. 0.75-0.9 naive).
-  - Do NOT use a 52-week (or any large) seasonal lag for this data.
-  - Handle short series safely; never index past the array; never return NaN/inf.
+THEREFORE -- BE CONSERVATIVE. Treat last-value naive as the ANCHOR and make only SMALL, SAFE edits:
+  - Keep naive as the backbone/fallback.
+  - Add at most a SMALL, heavily-damped trend (phi <= 0.7), capping per-step change to a small
+    fraction of the recent scale so forecasts cannot run away.
+  - Robust clipping to a band around recent observations; high naive weight in any blend (0.75-0.9).
+  - Do NOT use a large seasonal lag. Handle short series; never index past the array; no NaN/inf.
 
 A GOOD CONSERVATIVE TEMPLATE (adapt/improve it, but stay close to naive):
 
@@ -189,10 +232,9 @@ A GOOD CONSERVATIVE TEMPLATE (adapt/improve it, but stay close to naive):
         last = float(context[-1])
         if n < 4:
             return np.full(prediction_length, last, dtype=float)
-        recent = context[-4:]
-        slope = float(np.mean(np.diff(recent)))
+        slope = float(np.mean(np.diff(context[-4:])))
         scale = float(np.std(context[-13:])) if n >= 13 else float(np.std(context))
-        slope = float(np.clip(slope, -0.1 * scale, 0.1 * scale))  # tiny correction only
+        slope = float(np.clip(slope, -0.1 * scale, 0.1 * scale))
         phi = 0.6
         steps = np.arange(1, prediction_length + 1)
         out = last + slope * np.cumsum(phi ** steps)
@@ -202,26 +244,101 @@ A GOOD CONSERVATIVE TEMPLATE (adapt/improve it, but stay close to naive):
         out = np.clip(out, lo - 0.25 * span, hi + 0.25 * span)
         return np.nan_to_num(out, nan=last, posinf=hi, neginf=lo).astype(float)
 
-Aim for a SMALL improvement (MASE ~2.70-2.75 would be meaningful). It is better to TIE naive than to
-diverge far above it. Return ONLY the Python code for `forecast` (plus imports). No explanations,
-examples, tests, or __main__ block.
+Aim for a SMALL improvement (MASE ~2.70-2.75 would be meaningful). Better to TIE naive than diverge.
+Return ONLY the Python code for `forecast` (plus imports). No explanations/tests/__main__.
 '''
 
-# Selectable via --prompt_version.
-PROMPT_SPECS = {
-    "baseline": BASE_INTERFACE_SPEC + "\n" + BASELINE_STRATEGY,
-    "conservative_v2": BASE_INTERFACE_SPEC + "\n" + CONSERVATIVE_STRATEGY,
+_FACTS_M4_HOURLY = '''\
+CRITICAL BENCHMARK FACTS (measured on THIS exact task -- trust them):
+  - This is GIFT-Eval m4_hourly/H/short, HOURLY data, horizon 48.
+  - The last-value NAIVE baseline is WEAK here: MASE ~= 11.61.
+  - A SEASONAL-NAIVE forecast with DAILY period 24 is STRONG: MASE ~= 1.19 (about 10x better).
+  - moving average (~11.28) and damped trend (~12.04) are NOT better than naive.
+  => Hourly series have strong DAILY seasonality (period 24); weekly seasonality (period 168) may
+     also help. EXPLOIT seasonality; do NOT anchor on the last value.
+
+RECOMMENDED STRATEGIES (be robust; bound-check ALL indexing):
+  - Use a seasonal backbone with period 24: take the last full season (24 points) and tile it across
+    the horizon (seasonal naive), OR average the last K full days at each hour to denoise the pattern.
+  - Optionally add a small, damped level/trend correction on top of the seasonal pattern, or blend a
+    period-24 and period-168 seasonal estimate.
+  - Always fall back to last-value naive when context < one season.
+  - Clip to a sane range; never return NaN/inf; return exactly prediction_length values.
+
+A GOOD SEASONAL TEMPLATE (adapt/improve it -- try to BEAT seasonal naive, MASE < ~1.19):
+
+    import numpy as np
+    def forecast(context, prediction_length, freq, metadata=None):
+        context = np.asarray(context, dtype=float)
+        n = len(context)
+        if n == 0:
+            return np.zeros(prediction_length, dtype=float)
+        season = 24  # daily seasonality for hourly data
+        if n < season:
+            return np.full(prediction_length, float(context[-1]))
+        K = min(max(1, n // season), 8)            # average the last K full days
+        mat = context[-K * season:].reshape(K, season)
+        seasonal = mat.mean(axis=0)
+        reps = int(np.ceil(prediction_length / season))
+        out = np.tile(seasonal, reps)[:prediction_length]
+        return np.nan_to_num(out, nan=float(context[-1])).astype(float)
+
+Return ONLY the Python code for `forecast` (plus imports). No explanations/tests/__main__.
+'''
+
+_FACTS_HOSPITAL = '''\
+CRITICAL BENCHMARK FACTS (measured on THIS exact task -- trust them):
+  - This is GIFT-Eval hospital/M/short, MONTHLY count data, horizon 12.
+  - naive MASE ~= 0.9676; MOVING AVERAGE is the best simple baseline (~0.8139); seasonal-naive
+    (period 12) ~= 0.9205. Both moving average and mild seasonality BEAT naive.
+  => Smoothing helps a lot, and period-12 seasonality helps. Do not just repeat the last value.
+
+RECOMMENDED STRATEGIES (be robust; bound-check indexing):
+  - Use a smoothed level (moving average / exponential smoothing of recent points) as the backbone.
+  - Optionally add a period-12 seasonal adjustment (deviations of the last season around its mean).
+  - Keep forecasts non-negative (counts) and clipped to a sane range; fall back to naive for short
+    series; never return NaN/inf; return exactly prediction_length values.
+
+Aim to beat moving average (MASE < ~0.81). Return ONLY the Python code for `forecast` (plus imports).
+No explanations/tests/__main__.
+'''
+
+_FACTS_GENERIC = '''\
+OBJECTIVE: reward = -MASE (higher reward = lower MASE). You do not have measured baselines for this
+exact config, so reason from the frequency:
+  - If the data is likely SEASONAL (e.g. hourly->24/168, daily->7, monthly->12, quarterly->4), a
+    seasonal-naive backbone (tile/average the last full season) is often strong.
+  - Otherwise a robust smoothed level (moving average / exponential smoothing) with at most a small,
+    heavily-damped trend is a safe choice; last-value naive is a strong fallback.
+Be robust: handle short series, bound-check ALL indexing, clip to a sane range, never return NaN/inf,
+and return exactly prediction_length values.
+Return ONLY the Python code for `forecast` (plus imports). No explanations/tests/__main__.
+'''
+
+DATASET_FACTS = {
+    "m4_weekly": _FACTS_M4_WEEKLY,
+    "m4_hourly": _FACTS_M4_HOURLY,
+    "hospital": _FACTS_HOSPITAL,
 }
 
 
-def build_generation_prompt(prompt_version: str, parent_program: str, parent_score) -> str:
-    """Assemble the full generation prompt for a given parent (shared by C3 search and C4 compare)."""
+def _strategy(prompt_version, dataset):
+    if prompt_version == "baseline":
+        return BASELINE_STRATEGY
+    return DATASET_FACTS.get(dataset, _FACTS_GENERIC)
+
+
+def build_generation_prompt(prompt_version, parent_program, parent_score,
+                            dataset=DEFAULT_DATASET, freq=DEFAULT_FREQ, term=DEFAULT_TERM,
+                            horizon=None):
+    """Assemble the full, dataset-aware generation prompt (shared by C3 search and C4 compare)."""
     if parent_score is not None and math.isfinite(parent_score):
         parent_mase = f"{-parent_score:.6f}"
         parent_reward = f"{parent_score:.6f}"
     else:
         parent_mase, parent_reward = "unknown (invalid)", "-inf"
-    spec = PROMPT_SPECS[prompt_version]
+    base = _base_interface_spec(dataset, freq, term, horizon or KNOWN_HORIZON.get(dataset))
+    spec = base + "\n" + _strategy(prompt_version, dataset)
     return (
         f"{spec}\n\n"
         f"--- CURRENT (PARENT) CANDIDATE ---\n"
@@ -276,6 +393,7 @@ def score_program(
     timeout_s: int = 300,
     candidates_dir=None,
     logs_dir=None,
+    scorer_extra_args=None,
 ) -> dict:
     """Write a candidate program to disk and score it via the GIFT-Eval venv subprocess.
 
@@ -284,6 +402,8 @@ def score_program(
 
     `candidates_dir` / `logs_dir` can be overridden (used by C4 to separate ERA vs best-of-N
     candidate files); defaults preserve the C3 layout (out_dir/candidates, out_dir/candidate_logs).
+    `scorer_extra_args` (list) is appended to the scorer command, e.g. ["--dataset","m4_hourly",
+    "--freq","H","--term","short"].
     """
     candidates_dir = Path(candidates_dir) if candidates_dir is not None else (out_dir / "candidates")
     logs_dir = (
@@ -316,6 +436,8 @@ def score_program(
         "--out-dir",
         str(logs_dir),
     ]
+    if scorer_extra_args:
+        cmd.extend(str(a) for a in scorer_extra_args)
     t0 = time.time()
     try:
         proc = subprocess.run(
@@ -396,14 +518,21 @@ def main():
     parser.add_argument("--model", default=os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
                         help="Gemini model. Default: $GEMINI_MODEL or gemini-2.5-flash.")
     parser.add_argument("--out_dir", default=DEFAULT_OUT_DIR)
+    parser.add_argument("--dataset", default=DEFAULT_DATASET,
+                        help="GIFT-Eval dataset (e.g. m4_weekly, m4_hourly, hospital).")
+    parser.add_argument("--freq", default=DEFAULT_FREQ, help="Frequency label, e.g. W/H/M.")
+    parser.add_argument("--term", default=DEFAULT_TERM, choices=["short", "medium", "long"])
     parser.add_argument("--prompt_version", default="conservative_v2",
-                        choices=sorted(PROMPT_SPECS.keys()),
-                        help="Prompt strategy. 'conservative_v2' (default) anchors on the measured "
-                             "baselines and pushes small/safe edits to naive; 'baseline' is the "
+                        choices=PROMPT_VERSIONS,
+                        help="Prompt strategy. 'conservative_v2' (default) uses per-dataset measured "
+                             "facts and anchors on the right strong baseline; 'baseline' is the "
                              "original open-ended prompt (for A/B comparison).")
+    parser.add_argument("--initial_seed", default="naive", choices=SEED_CHOICES,
+                        help="Built-in seed candidate. Default 'naive' (the weak last-value baseline) "
+                             "for EVERY dataset. Use 'seasonal_naive' only for an optional "
+                             "strong-baseline/oracle run. Overridden by --initial_candidate if given.")
     parser.add_argument("--initial_candidate", default=None,
-                        help="Path to a candidate .py to SEED the search. Default: the built-in "
-                             "naive last-value baseline (recommended clean anchor).")
+                        help="Path to a candidate .py to SEED the search (overrides --initial_seed).")
     parser.add_argument("--gift_eval_python", default=DEFAULT_GIFT_EVAL_PYTHON)
     parser.add_argument("--scorer_script", default=DEFAULT_SCORER_SCRIPT)
     parser.add_argument("--temperature", type=float, default=None,
@@ -441,15 +570,21 @@ def main():
     (out_dir / "candidates").mkdir(exist_ok=True)
     (out_dir / "candidate_logs").mkdir(exist_ok=True)
 
-    # Resolve the initial (seed) candidate.
+    # Dataset context for the scorer subprocess + prompts.
+    scorer_args = ["--dataset", args.dataset, "--freq", args.freq, "--term", args.term]
+    ds_config = dataset_config(args.dataset, args.freq, args.term)
+    horizon = KNOWN_HORIZON.get(args.dataset)
+
+    # Resolve the initial (seed) candidate. Default = naive (weak baseline) for ALL datasets;
+    # --initial_candidate (a file path) overrides --initial_seed if provided.
     if args.initial_candidate:
         initial_code = Path(args.initial_candidate).read_text()
         initial_name = Path(args.initial_candidate).name
     else:
-        initial_code = INITIAL_CANDIDATE_CODE
-        initial_name = "naive (built-in last-value)"
+        initial_name, initial_code = resolve_seed(args.initial_seed)
 
     print(f"Out dir:          {out_dir}")
+    print(f"Dataset:          {ds_config}")
     print(f"Model:            {args.model}")
     print(f"Iterations:       {args.iterations}")
     print(f"Prompt version:   {args.prompt_version}")
@@ -472,7 +607,7 @@ def main():
     init_id = next_id["v"]; next_id["v"] += 1  # 0
     init_res = score_program(
         initial_code, init_id, out_dir,
-        args.gift_eval_python, args.scorer_script,
+        args.gift_eval_python, args.scorer_script, scorer_extra_args=scorer_args,
     )
     initial_solution = futs.Solution(initial_code)
     sol_to_id[id(initial_solution)] = init_id
@@ -489,14 +624,15 @@ def main():
         print("[!] Initial candidate did not score as valid. Check the GIFT-Eval venv / data. "
               "Aborting before spending Gemini calls.")
         _write_outputs(out_dir, records, args, initial_score, initial_name=initial_name,
-                       aborted=True)
+                       ds_config=ds_config, horizon=horizon, aborted=True)
         sys.exit(1)
 
     # --- 2) Generator: build prompt from parent, call Gemini, return a Solution ---
     def generate_fn(problem, parent_solution, parent_score):
         parent_id = sol_to_id.get(id(parent_solution))
         prompt = build_generation_prompt(
-            args.prompt_version, parent_solution.program, parent_score
+            args.prompt_version, parent_solution.program, parent_score,
+            dataset=args.dataset, freq=args.freq, term=args.term, horizon=horizon,
         )
         try:
             code = llm.draw_sample(prompt)
@@ -520,7 +656,7 @@ def main():
             parent_id = pending[1]
         res = score_program(
             solution.program, cand_id, out_dir,
-            args.gift_eval_python, args.scorer_script,
+            args.gift_eval_python, args.scorer_script, scorer_extra_args=scorer_args,
         )
         rec = CandidateRecord(
             iteration=cand_id, candidate_id=cand_id, parent_id=parent_id,
@@ -535,7 +671,7 @@ def main():
         return res["reward"]
 
     # --- 4) Run FUTS tree search (the real ERA loop) ---
-    problem = futs.Problem(PROBLEM_DESCRIPTION)
+    problem = futs.Problem(problem_description(args.dataset, args.freq, args.term, horizon))
     print(f"=== ERA / FUTS tree search ({args.iterations} iterations) ===")
     best_solution, best_score = futs.search(
         problem=problem,
@@ -551,11 +687,11 @@ def main():
     (out_dir / "best_candidate.py").write_text(best_solution.program)
 
     _write_outputs(out_dir, records, args, initial_score, initial_name=initial_name,
-                   best_score=best_score)
+                   ds_config=ds_config, horizon=horizon, best_score=best_score)
 
 
 def _write_outputs(out_dir, records, args, initial_score, initial_name="naive (built-in)",
-                   best_score=None, aborted=False):
+                   ds_config=None, horizon=None, best_score=None, aborted=False):
     """Write results.json, progress.csv and a run summary."""
     valid_records = [r for r in records if r.valid]
     invalid_records = [r for r in records if not r.valid]
@@ -586,8 +722,8 @@ def _write_outputs(out_dir, records, args, initial_score, initial_name="naive (b
 
     # results.json
     results = {
-        "dataset": DATASET_CONFIG,
-        "prediction_length": PREDICTION_LENGTH,
+        "dataset": ds_config or dataset_config(args.dataset, args.freq, args.term),
+        "prediction_length": horizon,
         "model": args.model,
         "prompt_version": args.prompt_version,
         "initial_candidate": initial_name,
@@ -612,8 +748,8 @@ def _write_outputs(out_dir, records, args, initial_score, initial_name="naive (b
     }
     (out_dir / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 
-    print("\n================ C3 SUMMARY ================")
-    print(f"Dataset:            {DATASET_CONFIG}")
+    print("\n=========== GIFT-Eval ERA Search Summary ===========")
+    print(f"Dataset:            {ds_config or dataset_config(args.dataset, args.freq, args.term)}")
     print(f"Model:              {args.model}")
     print(f"Prompt version:     {args.prompt_version}")
     print(f"Initial seed:       {initial_name}")
@@ -625,7 +761,7 @@ def _write_outputs(out_dir, records, args, initial_score, initial_name="naive (b
     print(f"Wrote: {out_dir/'progress.csv'}")
     if not aborted:
         print(f"Wrote: {out_dir/'best_candidate.py'}")
-    print("============================================")
+    print("====================================================")
 
 
 if __name__ == "__main__":

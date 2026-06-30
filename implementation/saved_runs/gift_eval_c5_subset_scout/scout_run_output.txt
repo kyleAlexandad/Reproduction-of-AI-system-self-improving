@@ -1,0 +1,82 @@
+GIFT_EVAL data = /Users/zhangweikun/era/gift-eval/data
+Scouting 4 subsets with 5 baselines each.
+
+=== m4_weekly (term=short) ===
+  freq=W-SUN pred_len=13 windows=1 season_len(metric)=1 n_series=359
+0it [00:00, ?it/s]359it [00:00, 2357.73it/s]359it [00:00, 2356.45it/s]
+    naive                  MASE=2.7773  (0.159s)
+0it [00:00, ?it/s]359it [00:00, 2146.21it/s]359it [00:00, 2145.16it/s]
+    moving_average         MASE=3.4206  (0.168s)
+0it [00:00, ?it/s]359it [00:00, 2365.45it/s]359it [00:00, 2364.28it/s]
+    seasonal_naive         MASE=9.5780  (0.153s)
+0it [00:00, ?it/s]359it [00:00, 2048.19it/s]359it [00:00, 2047.35it/s]
+    damped_trend           MASE=2.8039  (0.176s)
+0it [00:00, ?it/s]359it [00:00, 2221.80it/s]359it [00:00, 2220.70it/s]
+    ensemble_naive_trend   MASE=2.7818  (0.162s)
+  -> naive=2.7772950477470046  best_nonnaive=ensemble_naive_trend (2.7818311903025736)  ratio=1.0016332951586289
+  -> not recommended (naive dominates, no non-naive method beats it, ratio=1.002)
+
+=== m4_hourly (term=short) ===
+/Users/zhangweikun/era/gift-eval/.venv/lib/python3.12/site-packages/gluonts/time_feature/seasonality.py:47: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  offset = pd.tseries.frequencies.to_offset(freq)
+/Users/zhangweikun/era/gift-eval/src/gift_eval/data.py:151: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  freq = norm_freq_str(to_offset(self.freq).name)
+  freq=H pred_len=48 windows=1 season_len(metric)=24 n_series=414
+/Users/zhangweikun/era/gift-eval/.venv/lib/python3.12/site-packages/gluonts/dataset/common.py:263: FutureWarning: 'H' is deprecated and will be removed in a future version, please use 'h' instead.
+  return pd.Period(val, freq)
+0it [00:00, ?it/s]414it [00:00, 2468.19it/s]414it [00:00, 2467.09it/s]
+    naive                  MASE=11.6077  (0.169s)
+0it [00:00, ?it/s]414it [00:00, 2452.39it/s]414it [00:00, 2451.33it/s]
+    moving_average         MASE=11.2784  (0.17s)
+0it [00:00, ?it/s]414it [00:00, 2443.37it/s]414it [00:00, 2442.32it/s]
+    seasonal_naive         MASE=1.1932  (0.17s)
+0it [00:00, ?it/s]414it [00:00, 2315.64it/s]414it [00:00, 2314.66it/s]
+    damped_trend           MASE=12.0371  (0.18s)
+0it [00:00, ?it/s]414it [00:00, 2302.01it/s]414it [00:00, 2301.02it/s]
+    ensemble_naive_trend   MASE=11.6902  (0.181s)
+  -> naive=11.607687602745548  best_nonnaive=seasonal_naive (1.1932101877276544)  ratio=0.10279482258339089
+  -> strong candidate for ERA (a simple method clearly beats naive, ratio=0.103)
+
+=== hospital (term=short) ===
+/Users/zhangweikun/era/gift-eval/.venv/lib/python3.12/site-packages/gluonts/time_feature/seasonality.py:47: FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
+  offset = pd.tseries.frequencies.to_offset(freq)
+/Users/zhangweikun/era/gift-eval/src/gift_eval/data.py:151: FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
+  freq = norm_freq_str(to_offset(self.freq).name)
+  freq=M pred_len=12 windows=1 season_len(metric)=12 n_series=767
+0it [00:00, ?it/s]512it [00:00, 2962.05it/s]767it [00:00, 2943.91it/s]
+    naive                  MASE=0.9676  (0.261s)
+0it [00:00, ?it/s]512it [00:00, 2929.87it/s]767it [00:00, 2915.80it/s]
+    moving_average         MASE=0.8139  (0.264s)
+0it [00:00, ?it/s]512it [00:00, 2961.43it/s]767it [00:00, 2946.14it/s]
+    seasonal_naive         MASE=0.9205  (0.261s)
+0it [00:00, ?it/s]512it [00:00, 2752.76it/s]767it [00:00, 2730.97it/s]
+    damped_trend           MASE=1.0030  (0.281s)
+0it [00:00, ?it/s]512it [00:00, 2537.04it/s]767it [00:00, 2583.42it/s]
+    ensemble_naive_trend   MASE=0.9744  (0.297s)
+  -> naive=0.9676000297092351  best_nonnaive=moving_average (0.8139003225533192)  ratio=0.8411536766879774
+  -> strong candidate for ERA (a simple method clearly beats naive, ratio=0.841)
+
+=== covid_deaths (term=short) ===
+  freq=D pred_len=30 windows=1 season_len(metric)=1 n_series=266
+0it [00:00, ?it/s]266it [00:00, 2859.51it/s]
+    naive                  MASE=46.9124  (0.094s)
+0it [00:00, ?it/s]266it [00:00, 2820.70it/s]
+    moving_average         MASE=54.0025  (0.095s)
+0it [00:00, ?it/s]266it [00:00, 2843.18it/s]
+    seasonal_naive         MASE=53.4121  (0.094s)
+0it [00:00, ?it/s]266it [00:00, 2624.91it/s]266it [00:00, 2623.12it/s]
+    damped_trend           MASE=46.0975  (0.102s)
+0it [00:00, ?it/s]266it [00:00, 2622.92it/s]266it [00:00, 2620.85it/s]
+    ensemble_naive_trend   MASE=46.7494  (0.102s)
+  -> naive=46.91239825526407  best_nonnaive=damped_trend (46.097457473810636)  ratio=0.9826284561914932
+  -> possible candidate (a non-naive method slightly beats naive, ratio=0.983)
+
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c5_subset_scout/scout_results.csv
+Wrote /Users/zhangweikun/era/implementation/saved_runs/gift_eval_c5_subset_scout/scout_results.json
+
+================ SCOUT RECOMMENDATIONS ================
+m4_weekly      not recommended (naive dominates, no non-naive method beats it, ratio=1.002)
+m4_hourly      strong candidate for ERA (a simple method clearly beats naive, ratio=0.103)
+hospital       strong candidate for ERA (a simple method clearly beats naive, ratio=0.841)
+covid_deaths   possible candidate (a non-naive method slightly beats naive, ratio=0.983)
+======================================================

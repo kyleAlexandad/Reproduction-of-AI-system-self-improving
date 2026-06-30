@@ -1,0 +1,23 @@
+=== GIFT-Eval C6A environment info ===
+Tue Jun 30 03:16:31 PDT 2026
+
+## Scorer interpreter (GIFT-Eval venv)
+/Users/zhangweikun/era/gift-eval/.venv/bin/python
+Python 3.12.13
+
+## ERA controller interpreter (ERA env)
+/opt/homebrew/opt/python@3.12/libexec/bin/python (plain 'python' in a login shell)
+
+## Key GIFT-Eval venv packages
+datasets==2.17.1
+gluonts==0.15.1
+matplotlib==3.9.4
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.11.4
+
+## Datasets downloaded (data/)
+covid_deaths
+hospital
+m4_hourly
+m4_weekly

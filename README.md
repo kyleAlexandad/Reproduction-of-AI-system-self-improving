@@ -409,6 +409,33 @@ candidate ≈ MASE `2.7772955883` — extremely close but still slightly worse t
 - This preserves the project's central mechanism finding: **tree-search refinement can outperform
   independent sampling**, even on a harder real benchmark where the original baseline is hard to beat.
 
+### C5–C6 — A subset where ERA actually beats naive: `m4_hourly/H/short`
+
+Because naive is near-optimal on `m4_weekly`, a **subset-scouting** pass (C5) looked for a GIFT-Eval
+config where naive is *weak*. It found **`m4_hourly/H/short`** (hourly, horizon 48): naive MASE
+≈ **11.61**, but a seasonal-naive forecast with daily period 24 scores ≈ **1.19** (~10× better). C6A
+then made the scorer + ERA scripts **dataset-parametric** (`--dataset/--freq/--term`, and an explicit
+`--initial_seed {naive,seasonal_naive}` defaulting to **naive**). C6B ran ERA there **from the weak
+naive seed**:
+
+| run | result |
+|---|---|
+| ERA-only (10 iter, naive seed) | naive **11.6077** → **ERA best MASE 1.1384** (11/0 valid) |
+| ERA vs best-of-N (N=10, naive seed) | **ERA 1.1932** vs best-of-N **1.3651** → **ERA wins**; both beat naive |
+
+![C6B: ERA vs best-of-N on m4_hourly](implementation/saved_runs/gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/era_vs_bon_mase.png)
+
+**What ERA learned:** starting from last-value naive, ERA **discovered daily seasonality (period
+24)**. Its best program tiles the last 24 hours (seasonal naive) and adds a small *damped
+seasonal-difference* correction — beating even the seasonal-naive reference (1.1932 → **1.1384**).
+ERA's tree search refined a chain `11.61 → 2.25 → 1.51 → 1.40 → 1.22 → 1.19`, whereas best-of-N
+sampled independently and plateaued at 1.3651 (a noisier season-averaging approach).
+
+**Why it matters:** unlike `m4_weekly` (naive near-optimal, ERA could only tie), `m4_hourly` has
+*discoverable* structure — so ERA **clears the naive baseline by ~10×** and again beats best-of-N.
+This is the first GIFT-Eval subset confirming ERA's advantage in **absolute** terms, not just as a
+process comparison.
+
 ---
 
 ## 8. Final Takeaways
@@ -427,6 +454,10 @@ Instead, it is a **mechanistic reproduction and extension** showing:
 7. ERA was successfully **connected to GIFT-Eval** via a subprocess bridge to an isolated venv.
 8. On `m4_weekly/W/short`, **naive last-value forecasting is extremely strong; ERA did not beat it**,
    but ERA still produced **better generated candidates than independent best-of-N** under N=10 and N=20.
+9. On a harder/seasonal subset (`m4_hourly/H/short`), **ERA does beat naive**: starting from the weak
+   naive seed it **discovered daily seasonality (period 24)**, reaching MASE **1.1384** (vs naive
+   **11.61**, and below the seasonal-naive reference 1.1932), and again **beat best-of-N**
+   (1.1932 vs 1.3651). This is the project's main *positive* GIFT-Eval result.
 
 ### Limitations
 - The local `implementation/sandbox.py` is **not a secure sandbox** (runs LLM code directly).
@@ -528,9 +559,11 @@ implementation/
 ├── compare_era_vs_bon_breast_cancer.py   # Stage-2 ERA vs best-of-N (single)
 ├── repeated_breast_cancer_era_vs_bon.py  # Stage-2 repeated comparison
 ├── plot_progress.py                      # robust progress-figure plotter
-├── gift_eval_m4_weekly_task.py           # Stage-3 C2: ERA-scorable GIFT-Eval wrapper (run w/ GIFT-Eval venv)
-├── gift_eval_era_search.py               # Stage-3 C3: ERA/FUTS controller (ERA env; subprocess scoring)
-├── gift_eval_compare_era_vs_bon.py       # Stage-3 C4: ERA vs best-of-N on GIFT-Eval
+├── gift_eval_m4_weekly_task.py           # Stage-3 C2: original (m4_weekly) ERA-scorable wrapper
+├── gift_eval_task.py                     # Stage-3 C6A: generalized scorer (--dataset/--freq/--term)
+├── gift_eval_subset_scout.py             # Stage-3 C5: cheap-baseline subset scouting
+├── gift_eval_era_search.py               # Stage-3 C3/C6: ERA/FUTS controller (ERA env; subprocess scoring)
+├── gift_eval_compare_era_vs_bon.py       # Stage-3 C4/C6: ERA vs best-of-N on GIFT-Eval
 ├── initial_candidate_conservative.py     # optional conservative seed candidate (Stage-3)
 └── saved_runs/
     ├── playground_s3e1_iter30/              # Stage-1 Part-1 report + figures
@@ -548,7 +581,11 @@ implementation/
     ├── gift_eval_c3_era_iter20_conservative/  # Stage-3 C3: 20-iter conservative run
     ├── gift_eval_c3_summary/                # Stage-3 C3: consolidated report + CSV + plot
     ├── gift_eval_c4_era_vs_bon_N10/         # Stage-3 C4: ERA vs best-of-N (N=10)
-    └── gift_eval_c4_era_vs_bon_N20/         # Stage-3 C4: ERA vs best-of-N (N=20)
+    ├── gift_eval_c4_era_vs_bon_N20/         # Stage-3 C4: ERA vs best-of-N (N=20)
+    ├── gift_eval_c5_subset_scout/           # Stage-3 C5: subset scouting (found m4_hourly)
+    ├── gift_eval_c6a_parametric_scorer/     # Stage-3 C6A: parametric scorer validation
+    ├── gift_eval_c6b_era_m4_hourly_naive_iter10/       # Stage-3 C6B: ERA-only on m4_hourly
+    └── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/   # Stage-3 C6B: ERA vs best-of-N on m4_hourly
 ```
 
 > 🗂️ **External (not tracked):** `/Users/zhangweikun/era/gift-eval/` is a third-party clone of the

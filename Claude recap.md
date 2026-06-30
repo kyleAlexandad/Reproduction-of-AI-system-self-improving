@@ -3,12 +3,28 @@
 
 > Last updated: 2026-06-30. Repo: `/Users/zhangweikun/era` (git root).
 > Working subfolder for all reproduction code: `/Users/zhangweikun/era/implementation`.
-> Latest milestone: **GIFT-Eval Stage C COMPLETE (C1–C4)** — C1 setup ✅, C2 scorer wrapper ✅,
-> C3 ERA tree search ✅ (naive near-optimal, ERA only tied it, best gen within 5.4e-7), **C4 ERA vs
-> best-of-N RUN ✅** (N=10 and N=20: neither beat naive, but **ERA's best generated candidate beat
-> best-of-N's both times** — ERA reached naive exactly while BoN stayed ≈2.795/2.782). The root
-> **README.md was updated** with the full Stage-3 GIFT-Eval section + Final Takeaways. Earlier:
-> Stage 1 (regression) + Stage 2 (breast cancer) complete (ERA beat best-of-N 3/3 each).
+> Latest milestone: **GIFT-Eval Stage C: C1–C5 done** — C1 setup, C2 scorer, C3 ERA search, C4 ERA
+> vs best-of-N (all on m4_weekly where naive is near-optimal: ERA tied naive and beat best-of-N at
+> N=10/20). **C5 subset scouting DONE** → found subsets where naive is NOT dominant: **`m4_hourly`**
+> (seasonal naive 1.19 vs naive 11.61, ~10× headroom — primary C6 target) and **`hospital`** (MA
+> 0.81 vs naive 0.97 — secondary). Root **README.md** has the full Stage-3 section. **Next: C6 =
+> run ERA on `m4_hourly` where it can actually beat naive.** Earlier: Stage 1 (regression) + Stage 2
+> (breast cancer) complete (ERA beat best-of-N 3/3 each).
+>
+> **C6A DONE** (dataset-parametric scorer + ERA scripts): new `gift_eval_task.py` (`--dataset/--freq/
+> --term`); `gift_eval_era_search.py` + `gift_eval_compare_era_vs_bon.py` take `--dataset/--freq/
+> --term` + `--initial_seed {naive,seasonal_naive}` (DEFAULT naive for EVERY dataset).
+> **C6B DONE — the MAIN POSITIVE GIFT-Eval result:** on m4_hourly/H/short from the WEAK naive seed
+> (MASE 11.61), ERA discovered DAILY SEASONALITY (period 24) and reached **MASE 1.1384** (10-iter
+> ERA-only, even beating the seasonal-naive reference 1.1932); and ERA **beat best-of-N**
+> (1.1932 vs 1.3651) under equal budget. So ERA's tree-search advantage now holds on a real
+> benchmark AND clears the naive baseline (unlike m4_weekly where naive was unbeatable).
+>
+> DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
+> files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
+> `README.md`). Existing per-stage READMEs (C1..C6A) may stay/ be edited but no NEW ones.
+>
+> NOTE: C5 + C6A changes are currently **uncommitted** (those tasks did not request a push).
 >
 > **READ THIS FIRST — two-environment rule (new in Stage C):** ERA and GIFT-Eval need
 > *incompatible* Python envs. ERA code uses the system brew Python; GIFT-Eval uses its OWN venv at
@@ -312,15 +328,16 @@ git add -A && git commit -m "..." && git push repro main   # repro = user's repo
 
 ## 8. Remaining TODO
 
-### High priority — GIFT-Eval Stage C is COMPLETE (C1–C4 all done; see §13)
-- C1/C2/C3/C4 done; root README updated with the full Stage-3 section. Nothing pending in Stage C.
-- **Next dataset (recommended):** pick a small GIFT-Eval config where naive is *weaker* (e.g.
-  `bizitobs_l2c/H`, or an `ett*`/`electricity` config) so ERA has real headroom to BEAT naive (not
-  just tie it). Reuse the same wrapper+scorer: download via
-  `hf download Salesforce/GiftEval --include "<ds>/*" --local-dir gift-eval/data`, then point the
-  C2/C3/C4 scripts at it (currently hardcoded to `m4_weekly`; parametrise `DATASET_NAME`/`TERM`).
-- **Optional richer reward:** extend the candidate interface to return quantiles so CRPS (not just
-  MASE) can be optimized.
+### High priority — GIFT-Eval Stage C: C1–C6B DONE (see §13). Decide next.
+- **C6B done = the main POSITIVE GIFT-Eval result** (m4_hourly, naive seed): ERA 11.61→1.1384
+  (beats naive AND seasonal-naive 1.1932); ERA beat best-of-N 1.1932 vs 1.3651. README + recap done.
+- **Next options (pick one):**
+  1. **Consolidate** Stage C (recommended): the story is complete — naive-dominated subset (m4_weekly)
+     = tie + process win; seasonal subset (m4_hourly) = ERA beats naive AND best-of-N.
+  2. **Optional N=20** ERA-vs-best-of-N on m4_hourly to firm up the BoN gap (small headroom remains;
+     mainly strengthens the comparison).
+  3. **Secondary dataset** `hospital/M/short` (MA ~0.81 beats naive ~0.97) for a 2nd positive case.
+  4. **Optional richer reward:** return quantiles so CRPS (not just MASE) can be optimized.
 
 ### Secondary (toy-task track, paused)
 - **Run the model ablation** (flash-lite vs flash): `python model_ablation.py` → outputs under
@@ -418,15 +435,15 @@ Read "Claude recap.md" in the project root first to load full context, especiall
 (GIFT-Eval Stage C) and the two-environment rule. This is the google-research/era
 reproduction; ERA code is in /Users/zhangweikun/era/implementation.
 
-GIFT-Eval Stage C (C1–C4) is COMPLETE and the root README is updated (see §13). On
-m4_weekly/W/short naive is near-optimal: ERA tied it and beat best-of-N both at N=10 and N=20, but
-neither beat naive. The recommended next step is a NEW GIFT-Eval dataset where naive is weaker so
-ERA can actually beat it (see §8). To add one:
+GIFT-Eval Stage C C1–C6B are DONE (see §13). C6B is the main positive result: on m4_hourly from a
+weak naive seed (11.61) ERA discovered period-24 seasonality and reached MASE 1.1384 (beats naive
+AND seasonal-naive), and beat best-of-N (1.1932 vs 1.3651). Root README + recap updated.
 
-  # download a small config (example), then parametrise DATASET_NAME/TERM in the gift_eval_* scripts
-  /Users/zhangweikun/era/gift-eval/.venv/bin/python -m pip --version  # sanity
-  cd /Users/zhangweikun/era/gift-eval && source .venv/bin/activate
-  hf download Salesforce/GiftEval --repo-type=dataset --include "bizitobs_l2c/*" --local-dir ./data
+Decide the next step with the user (see §8): (1) consolidate Stage C (recommended), (2) optional
+N=20 ERA-vs-BoN on m4_hourly, (3) secondary dataset hospital/M/short, or (4) quantile/CRPS reward.
+
+DOCS POLICY (user, 2026-06-30): do NOT create new per-stage md; only update this recap + root
+README.md. NOTE: C5 + C6A + C6B doc/code changes are uncommitted (no push requested yet).
 
 I (the user) will run anything that spends Gemini calls; DO NOT run Gemini/ERA/best-of-N yourself —
 prepare code + give me exact commands. Keep N small; do not use gemini-2.5-pro. Run GIFT-Eval in a
@@ -572,6 +589,63 @@ share an env. So:
 - Outputs per run: `results.json`, `summary.csv`, `progress_era.csv`, `progress_bon.csv`,
   `era_candidates/`, `bon_candidates/`, `candidate_logs/`, `era_vs_bon_mase.png`, (`README_C4.md`,
   `commands_used.sh` in N10).
+
+### 13.7 C5 — subset scouting (DONE) → C6 target found
+- **`implementation/gift_eval_subset_scout.py`** (run with the **GIFT-Eval venv**; imports the C2
+  wrapper). Evaluates 5 cheap baselines (naive, moving_average, seasonal_naive, damped_trend,
+  ensemble) across small subsets via the official scorer (reward = -MASE). No Gemini/ERA/BoN.
+- Downloaded 3 more small leaf datasets into `gift-eval/data`: `m4_hourly` (414 series, H),
+  `hospital` (767, M), `covid_deaths` (266, D). (Skipped m4_daily/monthly/quarterly/yearly — too
+  many series / slow.)
+- **Findings (ratio = best-non-naive MASE / naive MASE; <1 means a simple method beats naive):**
+  - `m4_weekly` ratio **1.002** → naive dominates (consistent with C3/C4). ❌
+  - **`m4_hourly` ratio 0.103** (seasonal_naive 1.19 vs naive 11.61) → **strong C6 candidate.** ✅
+  - **`hospital` ratio 0.841** (moving_average 0.81 vs naive 0.97) → **strong C6 candidate.** ✅
+  - `covid_deaths` ratio 0.983 (damped_trend 46.10 vs 46.91) → marginal/possible. 🟡
+- Outputs: `saved_runs/gift_eval_c5_subset_scout/` (`scout_results.{csv,json}`, `README_C5.md`,
+  `commands_used.sh`, `environment_info.txt`, `baseline_mase_by_subset.png`, `relative_to_naive.png`,
+  `scout_run_output.txt`).
+- **Recommendation for C6: primary `m4_hourly/H/short`, secondary `hospital/M/short`.**
+
+### 13.8 C6A — dataset-parametric scorer + ERA scripts (DONE)
+- **`implementation/gift_eval_task.py`** = generalized scorer. CLI `--dataset --freq --term
+  --candidates --out-dir`. Reuses the C2 machinery (load_task + FunctionPredictor + gluonts
+  evaluate_model) from `gift_eval_m4_weekly_task.py` (kept intact for backward-compat). Same
+  candidate interface + reward (-MASE); invalid → valid=false/-inf.
+- **`gift_eval_era_search.py` + `gift_eval_compare_era_vs_bon.py`** now accept `--dataset/--freq/
+  --term`; `score_program` got a `scorer_extra_args` param that forwards these to the scorer
+  subprocess; default scorer switched to `gift_eval_task.py`. Prompts are now **dataset-aware**
+  (`DATASET_FACTS` per dataset + generic fallback, built via `build_generation_prompt(...,
+  dataset, freq, term, horizon)`). Seed is chosen by **`--initial_seed {naive,seasonal_naive}`,
+  DEFAULT `naive` for EVERY dataset** (`SEED_LIBRARY` + `resolve_seed()`); `--initial_candidate PATH`
+  overrides. (Earlier C6A had m4_hourly defaulting to seasonal-naive — CORRECTED per user: the main
+  m4_hourly run must start from the weak naive seed.) `PROMPT_SPECS` dict replaced by
+  `PROMPT_VERSIONS` list + builder functions; backward-compat aliases kept (INITIAL_CANDIDATE_CODE,
+  DATASET_CONFIG, PREDICTION_LENGTH).
+- **Validated (no Gemini):** `gift_eval_task.py` reproduces C5 EXACTLY on m4_hourly
+  (naive 11.6077, seasonal_naive 1.1932, MA 11.2784, damped 12.0371, ensemble 11.6902) and on
+  m4_weekly (naive 2.7773, seasonal 9.5780, MA 3.4206, ...). All py_compile + --help pass.
+- Outputs: `saved_runs/gift_eval_c6a_parametric_scorer/` (`README_C6A.md`, `commands_used.sh`,
+  `environment_info.txt`, 5 `candidate_*.py`, `hourly_results/` + `weekly_results/` each with
+  `candidate_results.{json,csv}` + `logs/`).
+
+### 13.9 C6B — ERA on m4_hourly from the weak naive seed (DONE; MAIN POSITIVE RESULT)
+- **ERA-only, 10 iter, naive seed** (`saved_runs/gift_eval_c6b_era_m4_hourly_naive_iter10/`):
+  initial naive MASE **11.6077** → ERA best **1.1384** (best candidate id 2), valid/invalid 11/0.
+  The best candidate discovered **daily seasonality (period 24)**: seasonal-naive backbone (tile the
+  last 24h) + a small DAMPED seasonal-difference correction (`context[-1]-context[-1-24]` decayed by
+  0.95^h) + naive fallback for short series + NaN guard. This even **beats the seasonal-naive
+  reference (1.1932)**.
+- **ERA vs best-of-N, N=10, naive seed** (`saved_runs/gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/`):
+  ERA best generated **1.1932** (reached pure seasonal-naive via an improving chain
+  11.61→2.25→1.51→1.40→1.22→1.19) vs best-of-N **1.3651** (a noisier season-averaging approach that
+  plateaued). Winner = **ERA**; both 10/0 valid; both beat the naive seed.
+- Significance: first GIFT-Eval subset where **ERA clears the naive baseline** (not just ties it) AND
+  beats best-of-N — because here the strong structure (period-24 seasonality) is *discoverable* and
+  naive is weak. Confirms the central mechanism claim on a real benchmark.
+- Code cleanup applied: summary banners are now "GIFT-Eval ERA Search Summary" / "GIFT-Eval ERA vs
+  Best-of-N Summary"; the compare metric `distance_to_naive_excl_seed`/`beat_naive` were renamed to
+  `delta_vs_seed` (NEGATIVE = improvement) / `beat_seed` (+ `either_beat_seed`, `delta_vs_seed_note`).
 
 ### 13.6 GIFT-Eval gotchas for the next agent
 - Use `hf download ... --include "<dataset>/*"` to add another small dataset (don't pull all 28).

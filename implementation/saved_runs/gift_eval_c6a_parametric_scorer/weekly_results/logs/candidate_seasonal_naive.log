@@ -1,0 +1,13 @@
+{
+  "candidate": "candidate_seasonal_naive",
+  "dataset": "m4_weekly/W/short",
+  "valid": true,
+  "error": null,
+  "runtime_s": 0.156,
+  "MASE": 9.57798652514135,
+  "CRPS": 0.13249270953900685,
+  "RMSE": 1397.8208625539582,
+  "MSE_mean": 1953903.1637910916,
+  "MAE": 727.2446756111572,
+  "reward": -9.57798652514135
+}

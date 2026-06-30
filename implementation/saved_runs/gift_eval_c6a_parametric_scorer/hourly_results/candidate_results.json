@@ -1,0 +1,73 @@
+{
+  "dataset": "m4_hourly/H/short",
+  "prediction_length": 48,
+  "season_length": 24,
+  "reward_definition": "reward = -MASE (lower MASE -> higher reward)",
+  "results": [
+    {
+      "candidate": "candidate_naive",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.187,
+      "MASE": 11.607687602745548,
+      "CRPS": 0.1662927277272588,
+      "RMSE": 7585.713136361401,
+      "MSE_mean": 57543043.787165925,
+      "MAE": 1218.064774563443,
+      "reward": -11.607687602745548
+    },
+    {
+      "candidate": "candidate_seasonal_naive",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.175,
+      "MASE": 1.1932101877276544,
+      "CRPS": 0.048309188694169974,
+      "RMSE": 1901.1459125890665,
+      "MSE_mean": 3614355.7809541146,
+      "MAE": 353.85625000161247,
+      "reward": -1.1932101877276544
+    },
+    {
+      "candidate": "candidate_moving_average",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.19,
+      "MASE": 11.278354576646436,
+      "CRPS": 0.21115578692309922,
+      "RMSE": 10556.765916663877,
+      "MSE_mean": 111445306.61923611,
+      "MAE": 1546.6787364153063,
+      "reward": -11.278354576646436
+    },
+    {
+      "candidate": "candidate_damped_trend",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.187,
+      "MASE": 12.037122257584974,
+      "CRPS": 0.1649125446666542,
+      "RMSE": 7389.138133216147,
+      "MSE_mean": 54599362.351749,
+      "MAE": 1207.9551781213845,
+      "reward": -12.037122257584974
+    },
+    {
+      "candidate": "candidate_ensemble_naive_trend",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.188,
+      "MASE": 11.690169196973264,
+      "CRPS": 0.1659833688570319,
+      "RMSE": 7544.784948062106,
+      "MSE_mean": 56923779.91250452,
+      "MAE": 1215.7987756368984,
+      "reward": -11.690169196973264
+    }
+  ]
+}

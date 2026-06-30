@@ -1,0 +1,26 @@
+=== GIFT-Eval C5 environment info ===
+Tue Jun 30 02:58:04 PDT 2026
+
+## Interpreter used for scouting (GIFT-Eval venv)
+/Users/zhangweikun/era/gift-eval/.venv/bin/python
+Python 3.12.13
+
+## Platform
+Darwin MacBook-Air.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:39:29 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T8142 arm64
+
+## Key package versions
+datasets==2.17.1
+gluonts==0.15.1
+matplotlib==3.9.4
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.11.4
+
+## GIFT_EVAL data path
+GIFT_EVAL=/Users/zhangweikun/era/gift-eval/data
+
+## Datasets downloaded locally (data/)
+covid_deaths
+hospital
+m4_hourly
+m4_weekly
