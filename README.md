@@ -422,6 +422,7 @@ naive seed**:
 |---|---|
 | ERA-only (10 iter, naive seed) | naive **11.6077** → **ERA best MASE 1.1384** (11/0 valid) |
 | ERA vs best-of-N (N=10, naive seed) | **ERA 1.1932** vs best-of-N **1.3651** → **ERA wins**; both beat naive |
+| ERA vs best-of-N (N=20, naive seed) | **ERA 1.1932** vs best-of-N **1.3651** → **ERA wins** again (both 20/0 valid; ERA explored 11 distinct solutions vs 6) |
 
 ![C6B: ERA vs best-of-N on m4_hourly](implementation/saved_runs/gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/era_vs_bon_mase.png)
 
@@ -585,7 +586,8 @@ implementation/
     ├── gift_eval_c5_subset_scout/           # Stage-3 C5: subset scouting (found m4_hourly)
     ├── gift_eval_c6a_parametric_scorer/     # Stage-3 C6A: parametric scorer validation
     ├── gift_eval_c6b_era_m4_hourly_naive_iter10/       # Stage-3 C6B: ERA-only on m4_hourly
-    └── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/   # Stage-3 C6B: ERA vs best-of-N on m4_hourly
+    ├── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/   # Stage-3 C6B: ERA vs best-of-N (N=10)
+    └── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N20/   # Stage-3 C6B: ERA vs best-of-N (N=20)
 ```
 
 > 🗂️ **External (not tracked):** `/Users/zhangweikun/era/gift-eval/` is a third-party clone of the

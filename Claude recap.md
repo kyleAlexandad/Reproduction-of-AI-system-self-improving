@@ -640,6 +640,10 @@ share an env. So:
   ERA best generated **1.1932** (reached pure seasonal-naive via an improving chain
   11.61→2.25→1.51→1.40→1.22→1.19) vs best-of-N **1.3651** (a noisier season-averaging approach that
   plateaued). Winner = **ERA**; both 10/0 valid; both beat the naive seed.
+- **ERA vs best-of-N, N=20, naive seed** (`saved_runs/gift_eval_c6b_era_vs_bon_m4_hourly_naive_N20/`):
+  SAME outcome with double the budget — ERA **1.1932** vs best-of-N **1.3651**; winner **ERA**; both
+  20/0 valid; both beat naive. ERA also explored more distinct solutions (11 unique valid MASE values
+  vs best-of-N's 6), i.e. more diverse search, not just luck. The ERA/BoN gap is stable in N.
 - Significance: first GIFT-Eval subset where **ERA clears the naive baseline** (not just ties it) AND
   beats best-of-N — because here the strong structure (period-24 seasonality) is *discoverable* and
   naive is weak. Confirms the central mechanism claim on a real benchmark.

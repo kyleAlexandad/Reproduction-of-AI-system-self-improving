@@ -1,0 +1,21 @@
+{
+  "dataset": "m4_hourly/H/short",
+  "prediction_length": 48,
+  "season_length": 24,
+  "reward_definition": "reward = -MASE (lower MASE -> higher reward)",
+  "results": [
+    {
+      "candidate": "cand_013",
+      "dataset": "m4_hourly/H/short",
+      "valid": true,
+      "error": null,
+      "runtime_s": 0.19,
+      "MASE": 3.089272187714666,
+      "CRPS": 0.053974655420873395,
+      "RMSE": 2271.521800474063,
+      "MSE_mean": 5159811.290028929,
+      "MAE": 395.3547902298842,
+      "reward": -3.089272187714666
+    }
+  ]
+}

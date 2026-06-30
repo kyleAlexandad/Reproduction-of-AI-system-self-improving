@@ -1,0 +1,13 @@
+{
+  "candidate": "cand_009",
+  "dataset": "m4_hourly/H/short",
+  "valid": true,
+  "error": null,
+  "runtime_s": 0.191,
+  "MASE": 2.20362002556687,
+  "CRPS": 0.1265707654456502,
+  "RMSE": 5826.03741845852,
+  "MSE_mean": 33942712.00127881,
+  "MAE": 927.1084369470383,
+  "reward": -2.20362002556687
+}

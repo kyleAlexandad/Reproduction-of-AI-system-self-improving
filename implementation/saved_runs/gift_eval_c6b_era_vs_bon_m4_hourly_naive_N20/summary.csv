@@ -1,0 +1,4 @@
+method,n_generated,valid,invalid,best_MASE_incl_seed,best_generated_MASE_excl_seed,delta_vs_seed(neg=better),beat_seed,n_unique_programs,n_duplicate_programs,n_unique_valid_MASE
+seed_baseline,0,,,11.607687602745548,,0.0,,,,
+ERA,20,20,0,1.1932101877276544,1.1932101877276544,-10.414477415017894,True,20,0,11
+best_of_N,20,20,0,1.3651106991172814,1.3651106991172814,-10.242576903628267,True,20,0,6
