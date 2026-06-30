@@ -1,0 +1,107 @@
+% Compile with pdflatex, xelatex, or tectonic:
+%   tectonic report.tex      (recommended; self-contained)
+%   pdflatex report.tex      (run twice to resolve references)
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{ERA Official Demo: Stage-1 Reproduction Report}
+\author{Reproduction Experiment Log}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+This report documents a reproduction of the \textbf{official minimal demo} shipped
+with \href{https://github.com/google-research/era}{\texttt{google-research/era}},
+the open-source code for the Nature paper \emph{An AI system to help scientists
+write expert-level empirical software}.
+
+An important clarification: this is \textbf{not} the full scRNA-seq or COVID
+scientific experiment from the paper. It is the official minimal, runnable demo
+included in the repository. Its purpose is to first get the entire ERA pipeline
+working locally end-to-end (LLM sampling, sandboxed execution, tree search,
+scoring, and iterative improvement), confirming that the system runs correctly
+and exhibits the expected ``gradual self-improvement'' behaviour, as a Stage-1
+foundation for the larger experiments to follow.
+
+\section{The Task}
+The demo is a Kaggle / California Housing--style \textbf{regression task}: given
+housing-related features, predict a continuous target value. ERA first evaluates
+an initial baseline solution and then runs a tree search that repeatedly
+generates, executes, and improves candidate programs.
+
+\section{The Score}
+The scoring metric is the \textbf{negative root-mean-squared error
+(negative RMSE)}, i.e. $-\mathrm{RMSE}$. Because of the negative sign, a
+\textbf{higher score (closer to $0$) means a better model}.
+
+\section{Key Results}
+The core results of this reproduction are summarised below.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Stage} & \textbf{Best score (negative RMSE, higher is better)} \\
+\midrule
+Initial baseline        & $-0.7339448894714724$ \\
+10-iteration best       & $\approx -0.5785$ \\
+30-iteration best       & $-0.5775746202235905$ \\
+\bottomrule
+\end{tabular}
+\caption{Best score of the ERA official demo at each stage.}
+\end{table}
+
+\section{Search Progress}
+Figure~\ref{fig:progress} shows the best-so-far score as a function of the search
+step during ERA tree search. Step~0 is the initial linear-regression baseline; a
+large jump occurs immediately at step~1, after which the search makes small,
+steady improvements on gradient-boosting / feature-engineering solutions before
+quickly reaching a plateau.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{progress}
+\caption{ERA demo search progress: best-so-far score (negative RMSE) versus search
+step. The red dashed line is the initial baseline, the green dotted line is the
+10-iteration best, and the purple dash-dotted line is the 30-iteration best.}
+\label{fig:progress}
+\end{figure}
+
+\section{Interpretation}
+\begin{itemize}
+  \item \textbf{The ERA main loop was successfully reproduced.} The system
+        completes the full closed loop of
+        sample $\rightarrow$ sandboxed execution $\rightarrow$ scoring
+        $\rightarrow$ selection and iteration, and exhibits the expected
+        self-improvement behaviour.
+  \item \textbf{Solution quality improved substantially.} The search started from
+        a simple linear-regression baseline (score $\approx -0.7339$) and
+        automatically evolved into a solution centred on gradient boosting
+        (\texttt{HistGradientBoostingRegressor}), with extensive feature
+        engineering (including location/distance features) and an ensemble of
+        three gradient-boosting models (score $\approx -0.5776$).
+  \item \textbf{It plateaus quickly.} Thirty iterations improved only marginally
+        over ten iterations (roughly $-0.5785 \rightarrow -0.5776$), indicating
+        that the search space of this toy task is small and that ERA approaches
+        the plateau quickly, with rapidly diminishing returns from further
+        iterations.
+\end{itemize}
+
+\section{Next Step}
+The next experiment is to compare, on the same task,
+\textbf{ERA tree search} against \textbf{best-of-$N$ independent LLM sampling}.
+Under an equal LLM-call budget, we will evaluate the final score and sample
+efficiency of both approaches, in order to measure the actual gain of ERA's
+``tree search + iterative improvement'' over plain independent parallel sampling.
+
+\end{document}

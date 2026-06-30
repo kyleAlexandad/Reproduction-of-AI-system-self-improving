@@ -185,7 +185,7 @@ def wrapper(unused_arg):
             print(f"Scoring error: {e}")
             return float('-inf')
 
-def run_experiment(iterations=10):
+def run_experiment(iterations=30):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("Set GEMINI_API_KEY")
