@@ -1,0 +1,43 @@
+{
+  "note": "reduced Python-only proxy reward (bio + batch_mixing), higher better; NOT scIB",
+  "synthetic": {
+    "log_norm_pca_seed": 1.0699458867311478,
+    "pca_baseline_D1": 1.066090241074562,
+    "batch_centered_ref_D1": 1.302372277714312,
+    "D2A_era_5iter_best": 1.2792547962162644,
+    "D2A_era_5iter_valid_invalid": [
+      6,
+      0
+    ],
+    "D2A_era_10iter_best": 1.2525294265942648,
+    "D2A_era_10iter_valid_invalid": [
+      10,
+      1
+    ]
+  },
+  "pbmc3k": {
+    "pca20_seed": 1.027498096358162,
+    "batch_centered_ref": 1.0700699165859162,
+    "D3B_5iter_best": 1.028066096928793,
+    "D3B_5iter_valid_invalid": [
+      2,
+      4
+    ],
+    "D3B_10iter_best": 1.070069915149361,
+    "D3B_10iter_valid_invalid": [
+      11,
+      0
+    ],
+    "D3C_era_best": 1.070069915149361,
+    "D3C_era_valid_invalid": [
+      10,
+      0
+    ],
+    "D3C_bon_best": 1.0700699165859162,
+    "D3C_bon_valid_invalid": [
+      10,
+      0
+    ],
+    "D3C_winner_note": "effective tie (~1.4e-9 gap = float32 vs float64)"
+  }
+}
