@@ -510,6 +510,12 @@ and runs the same candidate interface + reduced score. On 500 cells the batch-ce
 plain PCA — confirming a *real* AnnData flows cleanly through the ERA-style pipeline, as a bridge
 toward the full paper-scale scRNA benchmark.
 
+This PBMC3k task is also wired into the ERA search loop: `implementation/scrna_realdata_task.py` is an
+ERA-scorable scorer that builds a deterministic (cached) prepared PBMC3k AnnData, and
+`scrna_era_search.py --task pbmc3k` drives Gemini + FUTS against it (scoring each candidate by
+subprocess into `scRNA-env`), starting from a PCA baseline (reward ≈ 1.0275). The two-environment
+bridge and invalid handling are validated without Gemini; the small ERA run is launched manually.
+
 ---
 
 ## 9. How to Run

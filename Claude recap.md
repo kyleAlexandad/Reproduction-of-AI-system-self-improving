@@ -53,7 +53,21 @@
 > API (private dataset, not fetchable programmatically). Pivoted: `scrna_realdata_smoke.py` now has
 > `--source scanpy_pbmc3k` (10x PBMC3k, ~5.6 MB) with Leiden proxy `cell_type` + an injected artificial
 > batch. Works end-to-end: 500 cells × 2000 HVG, 3 batches, 10 clusters; `batch_centered_pca` 1.0701 >
-> `pca` 1.0275. Details in **§14.11**. (These D3A-alt changes are UNCOMMITTED — no push requested.)
+> `pca` 1.0275. Details in **§14.11**. (D3A-alt committed + pushed to repro/main: `7a45bf6`.)
+>
+> **D3B-alt DONE (2026-06-30) — PBMC3k real-data task wired into the ERA loop (code-ready; Gemini NOT
+> run).** New `implementation/scrna_realdata_task.py` (scorer, scRNA-env; reproduces D3A-alt baselines
+> EXACTLY: pca20 1.027498, bc20 1.070070). `scrna_era_search.py` generalized with `--task
+> {synthetic,pbmc3k}` + pbmc3k dataset params; two-env bridge validated without Gemini (seed reward
+> 1.0275, crash→-inf, task-aware prompt). User runs the 5-iter Gemini smoke manually. Details in
+> **§14.12**.
+>
+> **D3B-alt 5-iter Gemini run (user):** seed 1.0275 → best **1.028066** (cand 1, regress_out+PCA);
+> valid/invalid **2/4** — 4 invalids from bad ComBat APIs (`scanpy.external.pp.combat`, `sc.tl.combat`)
+> + a `regress_out(n_jobs=-1)` crash. **D3B.1 DONE (2026-06-30):** hardened the pbmc3k prompt
+> (`--prompt_version pbmc3k_conservative_v2`, now default for pbmc3k) — bans those broken APIs, lists
+> only reliable blocks, gives measured refs (PCA 1.0275, batch-centered 1.0701). Non-Gemini validated;
+> user runs the 10-iter retry. Still UNCOMMITTED (no push requested). Details in **§14.13**.
 >
 > DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
 > files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
@@ -885,3 +899,65 @@ share an env. So:
 - **Still blocked by the Kaggle 3GB file:** the OFFICIAL paper dataset + the OFFICIAL 12-metric scIB
   score (which also needs R/kBET). PBMC3k is a lightweight bridge, not the paper benchmark. Natural
   next step: point `scrna_era_search.py` at a PBMC3k-backed scorer for a small REAL-data ERA smoke.
+
+### 14.12 D3B-alt — PBMC3k real-data task connected to ERA search (DONE; code-ready, Gemini NOT run)
+- **Goal:** a small REAL-data ERA smoke on the PBMC3k task (real biology + artificial batch), same
+  GIFT-Eval-style two-env split. No official Kaggle/HCA data, no R/kBET, no full scIB, no best-of-N,
+  no large run.
+- **New scorer:** `implementation/scrna_realdata_task.py` (runs in scRNA-env). Builds a DETERMINISTIC
+  prepared PBMC3k AnnData (`load_pbmc3k_adata` → `subsample` → `inject_artificial_batch`, reusing D3A-
+  alt) and **caches it** (keyed by all params) under gitignored `data/scanpy_cache/prepared_*.h5ad`,
+  re-loading the round-tripped copy so EVERY candidate is scored on byte-identical data. Loads a
+  candidate, pops `cell_type` (must not use it), validates `obsm['X_emb']`, scores with the reduced
+  proxy; reward = score (higher better); writes `candidate_results.json` (+ parseable stdout).
+- **Controller generalized:** `scrna_era_search.py` now takes `--task {synthetic,pbmc3k}` and pbmc3k
+  params (`--source/--n_cells/--n_batches/--batch_strength/--n_hvg/--leiden_resolution/--data_seed`).
+  It resolves the scorer script + seed by task (pbmc3k seed = `PCA_SEED_CODE_20`, a 20-comp PCA matching
+  the D3A-alt baseline) and forwards dataset params via a new `score_program(scorer_extra_args=...)`.
+  Prompt is task-aware (`_interface_spec(task)` — pbmc3k intro says "real PBMC3k + ARTIFICIAL batch").
+  results.json records `task` + `dataset_params`. **Synthetic path unchanged (backward compatible).**
+- **Non-Gemini validation (all PASS):** py_compile both; controller imports in ERA env (no scanpy
+  leak); scorer on 3 hand candidates → `pca20` **1.027498**, `batch_centered20` **1.070070** (exactly
+  == D3A-alt), `invalid`→valid=False; full ERA→scRNA bridge with `--task pbmc3k` scored the PCA20 seed
+  (reward 1.0275) and mapped a crashing candidate to reward -inf; prompt confirmed task-aware.
+- **Baselines / success target:** seed (PCA20) reward = **1.0275**. ERA success = best > 1.0275;
+  stronger = best ≥ 1.0701 (the batch-centered PCA level).
+- **User runs the 5-iter Gemini smoke manually** (do NOT run here):
+  `cd /Users/zhangweikun/era/implementation && unset GOOGLE_API_KEY && export GEMINI_API_KEY="KEY" &&
+  export GEMINI_MODEL=gemini-2.5-flash && python scrna_era_search.py --task pbmc3k --source
+  scanpy_pbmc3k --n_cells 500 --iterations 5 --model gemini-2.5-flash --out_dir
+  saved_runs/scrna_d3b_pbmc3k_era_smoke`.
+- **Status:** D3B-alt code UNCOMMITTED (no push requested this stage). Still deferred: official Kaggle
+  dataset + official 12-metric scIB (needs R/kBET); optional ERA-vs-best-of-N on pbmc3k.
+
+### 14.13 D3B.1 — PBMC3k prompt postmortem + hardening (DONE; Gemini NOT run)
+- **The 5-iter smoke** (`saved_runs/scrna_d3b_pbmc3k_era_smoke/`): 6 candidates, seed + 5 generated.
+  - `cand_000` seed PCA20 → **1.0275** (bio .559, batch_mix .468).
+  - `cand_001` (parent 0): normalize→log1p→HVG(2000)→`sc.pp.regress_out(adata,'batch')`→scale→PCA(50).
+    VALID, **best 1.028066** (bio .521↓, batch_mix .507↑) — only a hair above the seed.
+  - `cand_002` (parent 1): `import scanpy.external.pp as pepp; pepp.combat(...)` →
+    `AttributeError: module 'scanpy.external.pp' has no attribute 'combat'`. INVALID.
+  - `cand_003`, `cand_004` (parent 1): `sc.tl.combat(...)` → `AttributeError: combat` (ComBat is
+    `sc.pp.combat`, NOT `sc.tl.combat`). INVALID.
+  - `cand_005` (parent 1): `sc.pp.regress_out(..., n_jobs=-1)` + post-PCA centering →
+    `ValueError: number sections must be larger than 0` (numpy array_split in the n_jobs chunking).
+    INVALID.
+  - Net: **2/6 valid, 4/6 invalid**; every invalid was a bad-ComBat-API or `regress_out(n_jobs=-1)`
+    crash. The known-good batch-centering direction (~1.0701) never completed because candidates
+    crashed earlier on ComBat.
+- **Fix — new prompt `pbmc3k_conservative_v2`** (in `scrna_era_search.py`; `PROMPT_VERSIONS` +
+  `_strategy_block`): explicitly BANS `scanpy.external.pp`/`.combat` and `sc.tl.combat`; forbids ComBat
+  unless `hasattr(sc.pp,"combat")` (prefer to avoid); warns off external APIs (harmony/bbknn/scanorama/
+  mnnpy) and `n_jobs=-1`; lists ONLY reliable blocks (normalize_total, log1p, PCA, per-batch mean
+  centering in embedding/expression, robust scaling, sklearn); states measured refs **PCA 1.0275** /
+  **batch-centered 1.0701** and points at the strong reliable direction. Kept `baseline` for A/B.
+  `--prompt_version` now defaults per task (pbmc3k → conservative_v2). Added `--initial_seed
+  {pca(default),batch_centered}` (+ `BATCH_CENTERED_SEED_CODE_20`, opt-in; main run still starts from
+  PCA). Summary banner fixed to `Summary ({task})` (was hardcoded "synthetic"). `results.json` now
+  records `prompt_version`.
+- **Non-Gemini validated:** py_compile; rendered prompt asserts all bans + refs present; `--help` shows
+  the new flags; default_prompt_version correct; synthetic path unchanged.
+- **Next (user, manual 10-iter):** `python scrna_era_search.py --task pbmc3k --source scanpy_pbmc3k
+  --n_cells 500 --iterations 10 --model gemini-2.5-flash --prompt_version pbmc3k_conservative_v2
+  --out_dir saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative`. Success: invalid < 4/6; best > 1.0275;
+  strong if best ≈/≥ 1.0701.

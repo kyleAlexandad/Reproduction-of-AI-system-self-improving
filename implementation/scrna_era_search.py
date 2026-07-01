@@ -50,7 +50,9 @@ from llm import GeminiLLM, DEFAULT_MODEL
 
 # --- Defaults (two-env split) ------------------------------------------------------------
 DEFAULT_SCRNA_PYTHON = "/Users/zhangweikun/era/scRNA-env/bin/python"
-DEFAULT_SCORER_SCRIPT = str(Path(__file__).resolve().parent / "scrna_synthetic_task.py")
+DEFAULT_SYNTH_SCORER = str(Path(__file__).resolve().parent / "scrna_synthetic_task.py")
+DEFAULT_REALDATA_SCORER = str(Path(__file__).resolve().parent / "scrna_realdata_task.py")
+DEFAULT_SCORER_SCRIPT = DEFAULT_SYNTH_SCORER  # synthetic default (backward compatible)
 DEFAULT_OUT_DIR = "saved_runs/scrna_d2a_synthetic_era_smoke"
 
 
@@ -77,6 +79,53 @@ def eliminate_batch_effect_fn(adata, config):
     return adata
 '''
 
+# 20-component PCA seed used for the pbmc3k task (matches the D3A-alt PCA baseline, ~1.0275).
+PCA_SEED_CODE_20 = '''\
+import numpy as np
+import scanpy as sc
+from sklearn.decomposition import PCA
+
+
+def eliminate_batch_effect_fn(adata, config):
+    adata = adata.copy()
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
+    X = adata.X
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    X = np.asarray(X)
+    n_comps = int(min(20, X.shape[1] - 1, X.shape[0] - 1))
+    emb = PCA(n_components=n_comps, random_state=0).fit_transform(X)
+    adata.obsm["X_emb"] = emb
+    return adata
+'''
+
+# Optional stronger seed (opt-in via --initial_seed batch_centered): PCA20 + per-batch mean centering
+# in embedding space (the ~1.0701 reference). Default seed stays plain PCA so ERA must find this itself.
+BATCH_CENTERED_SEED_CODE_20 = '''\
+import numpy as np
+import scanpy as sc
+from sklearn.decomposition import PCA
+
+
+def eliminate_batch_effect_fn(adata, config):
+    adata = adata.copy()
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
+    X = adata.X
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    X = np.asarray(X)
+    n_comps = int(min(20, X.shape[1] - 1, X.shape[0] - 1))
+    emb = PCA(n_components=n_comps, random_state=0).fit_transform(X)
+    batch = adata.obs["batch"].to_numpy()
+    for b in np.unique(batch):
+        mask = batch == b
+        emb[mask] -= emb[mask].mean(axis=0, keepdims=True)
+    adata.obsm["X_emb"] = emb
+    return adata
+'''
+
 
 PROBLEM_DESCRIPTION = (
     "Improve a single-cell RNA-seq BATCH INTEGRATION function on a small synthetic dataset. "
@@ -86,9 +135,86 @@ PROBLEM_DESCRIPTION = (
 )
 
 
-def _interface_spec() -> str:
-    return '''\
-TASK: single-cell RNA-seq BATCH INTEGRATION on a small SYNTHETIC dataset.
+PROMPT_VERSIONS = ["baseline", "pbmc3k_conservative_v2"]
+
+
+def default_prompt_version(task: str) -> str:
+    return "pbmc3k_conservative_v2" if task == "pbmc3k" else "baseline"
+
+
+# v1 ("baseline"): open-ended technique list (kept for A/B comparison).
+BASELINE_STRATEGY = '''\
+RECOMMENDED LIGHTWEIGHT TECHNIQUES (combine/improve; be creative but robust):
+  - normalize_total + log1p, then PCA.
+  - batch-centering in embedding space: subtract each batch's mean embedding vector.
+  - per-batch mean correction / robust scaling of genes before PCA.
+  - simple linear batch-effect removal (e.g. regress out batch indicator variables per gene).
+  - z-scoring genes; clipping outliers; blends of the above.
+
+REWARD (higher is better): reduced score = bio_score + batch_mixing_score, where
+  - bio_score rewards keeping cell types SEPARABLE (biology preserved),
+  - batch_mixing_score rewards MIXING the batches (batch effect removed).'''
+
+
+# v2 ("pbmc3k_conservative_v2"): hardened after the 5-iter smoke (4/6 invalid from bad ComBat APIs).
+PBMC3K_CONSERVATIVE_V2_STRATEGY = '''\
+ENVIRONMENT CONSTRAINTS -- read carefully. These EXACT mistakes made most candidates INVALID before:
+  * Do NOT use `scanpy.external.pp` or `scanpy.external.pp.combat` -- that module/attribute is NOT
+    available here (AttributeError: module 'scanpy.external.pp' has no attribute 'combat').
+  * Do NOT use `sc.tl.combat` -- it does NOT exist here (AttributeError: combat).
+  * Do NOT use ComBat at all UNLESS you FIRST verify it with `hasattr(sc.pp, "combat")`. Strongly
+    prefer to AVOID ComBat entirely.
+  * AVOID advanced / external integration APIs (harmony, bbknn, scanorama, mnnpy, combat) -- they are
+    not reliably importable in this environment and will crash the candidate.
+  * Do NOT pass `n_jobs=-1` to scanpy preprocessing (e.g. `sc.pp.regress_out(..., n_jobs=-1)`); it can
+    raise "number sections must be larger than 0". PREFER plain NUMPY per-batch mean subtraction over
+    `sc.pp.regress_out`.
+
+USE ONLY these simple, reliable building blocks (all verified to work in this environment):
+  1. sc.pp.normalize_total(adata, target_sum=1e4)
+  2. sc.pp.log1p(adata)
+  3. PCA (sklearn PCA or sc.pp.pca) to build the embedding
+  4. subtract each BATCH's MEAN vector in EMBEDDING space, AFTER PCA        <-- most helpful
+  5. subtract each BATCH's MEAN per gene in EXPRESSION space, BEFORE PCA
+  6. robust scaling / z-scoring of genes (sc.pp.scale(max_value=10) or sklearn StandardScaler)
+  7. simple sklearn preprocessing
+
+MEASURED REFERENCE SCORES on THIS exact task (trust them):
+  - PCA baseline (normalize_total -> log1p -> PCA):              reward ~= 1.0275
+  - PCA THEN subtract per-batch mean in EMBEDDING space:         reward ~= 1.0701  (BEST simple method)
+STRONG, RELIABLE DIRECTION: normalize_total -> log1p -> PCA -> then subtract each batch's mean embedding
+vector (batch-centering in embedding space). Aim to MATCH or BEAT ~1.0701 with ROBUST code. Small safe
+add-ons (also centering per-gene BEFORE PCA, or light scaling) are welcome, but keep EVERYTHING to
+numpy / sklearn / basic scanpy so the candidate stays VALID.
+
+REWARD (higher is better): reduced score = bio_score + batch_mixing_score, where
+  - bio_score rewards keeping cell types SEPARABLE (biology preserved),
+  - batch_mixing_score rewards MIXING the batches (batch effect removed).
+  (Reduced proxy score, NOT the official scIB metric.)'''
+
+
+def _strategy_block(prompt_version: str) -> str:
+    if prompt_version == "pbmc3k_conservative_v2":
+        return PBMC3K_CONSERVATIVE_V2_STRATEGY
+    return BASELINE_STRATEGY
+
+
+def _interface_spec(task: str = "synthetic", prompt_version: str = "baseline") -> str:
+    if task == "pbmc3k":
+        intro = (
+            "TASK: single-cell RNA-seq BATCH INTEGRATION on a SMALL REAL dataset (10x PBMC3k) with\n"
+            "ARTIFICIAL batch effects injected into the counts. The cell-type structure is REAL\n"
+            "(proxy labels from clustering the clean data); the batches are synthetic groups with a\n"
+            "controlled per-gene nuisance shift added to expression."
+        )
+        data_line = ("The data has REAL biological signal (cell clusters) AND an injected nuisance "
+                     "batch effect.")
+    else:
+        intro = "TASK: single-cell RNA-seq BATCH INTEGRATION on a small SYNTHETIC dataset."
+        data_line = ("The synthetic data contains BOTH genuine biological signal (cell types) AND "
+                     "nuisance batch effects.")
+    return f'''\
+{intro}
 
 You are given an AnnData object `adata` with:
   - adata.X               : raw gene-expression counts, shape (n_cells, n_genes).
@@ -96,7 +222,7 @@ You are given an AnnData object `adata` with:
   - adata.obs["cell_type"]: HIDDEN at integration time -- it is REMOVED before your function is
                             called, and you MUST NOT rely on it.
 
-The synthetic data contains BOTH genuine biological signal (cell types) AND nuisance batch effects.
+{data_line}
 GOAL: produce a low-dimensional embedding that MIXES the batches (removes batch differences) while
 PRESERVING biological structure (keeps cell types separable).
 
@@ -117,29 +243,21 @@ HARD REQUIREMENTS (a violation makes the candidate invalid, reward = -inf):
   7. Do NOT download data or call any network/external service.
   8. Use ONLY numpy, scipy, scanpy, and scikit-learn (all available).
 
-RECOMMENDED LIGHTWEIGHT TECHNIQUES (combine/improve; be creative but robust):
-  - normalize_total + log1p, then PCA.
-  - batch-centering in embedding space: subtract each batch's mean embedding vector.
-  - per-batch mean correction / robust scaling of genes before PCA.
-  - simple linear batch-effect removal (e.g. regress out batch indicator variables per gene).
-  - z-scoring genes; clipping outliers; blends of the above.
-
-REWARD (higher is better): reduced score = bio_score + batch_mixing_score, where
-  - bio_score rewards keeping cell types SEPARABLE (biology preserved),
-  - batch_mixing_score rewards MIXING the batches (batch effect removed).
-  (This is a synthetic smoke-test proxy, NOT the official scIB metric.)
+{_strategy_block(prompt_version)}
 
 Return ONLY the Python code for `eliminate_batch_effect_fn` (plus any imports it needs).
 No explanations, no tests, no __main__ block.
 '''
 
 
-def build_generation_prompt(parent_program: str, parent_score: float | None) -> str:
+def build_generation_prompt(parent_program: str, parent_score: float | None,
+                            task: str = "synthetic",
+                            prompt_version: str = "baseline") -> str:
     if parent_score is not None and math.isfinite(parent_score):
         parent_reward = f"{parent_score:.6f}"
     else:
         parent_reward = "-inf (parent was invalid)"
-    spec = _interface_spec()
+    spec = _interface_spec(task, prompt_version)
     return (
         f"{spec}\n"
         f"--- CURRENT (PARENT) CANDIDATE ---\n"
@@ -182,6 +300,7 @@ def score_program(
     scrna_python: str,
     scorer_script: str,
     timeout_s: int = 300,
+    scorer_extra_args=None,
 ) -> dict:
     """Write a candidate program to disk and score it via the scRNA env subprocess.
 
@@ -214,6 +333,8 @@ def score_program(
         "--candidate", str(cand_path),
         "--out-dir", str(logs_dir),
     ]
+    if scorer_extra_args:
+        cmd.extend(str(a) for a in scorer_extra_args)
     t0 = time.time()
     try:
         proc = subprocess.run(
@@ -288,16 +409,50 @@ def main():
     parser.add_argument("--model", default=os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
                         help="Gemini model. Default: $GEMINI_MODEL or gemini-2.5-flash.")
     parser.add_argument("--out_dir", default=DEFAULT_OUT_DIR)
+    parser.add_argument("--task", default="synthetic", choices=["synthetic", "pbmc3k"],
+                        help="Which scRNA task to search. 'synthetic' (default) or 'pbmc3k' (real).")
     parser.add_argument("--initial_candidate", default=None,
                         help="Path to a candidate .py to SEED the search (default: PCA baseline).")
     parser.add_argument("--scrna_python", default=DEFAULT_SCRNA_PYTHON)
-    parser.add_argument("--scorer_script", default=DEFAULT_SCORER_SCRIPT)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--scorer_script", default=None,
+                        help="Scorer script. Defaults by --task (synthetic vs pbmc3k scorer).")
+    parser.add_argument("--seed", type=int, default=0, help="FUTS / random seed.")
     parser.add_argument("--c_puct", type=float, default=1.0)
+    # --- pbmc3k dataset params (passed through to the real-data scorer) ---
+    parser.add_argument("--source", default="scanpy_pbmc3k", choices=["scanpy_pbmc3k", "pbmc3k"])
+    parser.add_argument("--n_cells", type=int, default=500)
+    parser.add_argument("--n_batches", type=int, default=3)
+    parser.add_argument("--batch_strength", type=float, default=0.8)
+    parser.add_argument("--n_hvg", type=int, default=2000)
+    parser.add_argument("--leiden_resolution", type=float, default=1.0)
+    parser.add_argument("--data_seed", type=int, default=42,
+                        help="[pbmc3k] seed for the prepared dataset (subsample + batch injection).")
+    parser.add_argument("--prompt_version", default=None, choices=PROMPT_VERSIONS,
+                        help="Generation prompt. Default: 'pbmc3k_conservative_v2' for --task pbmc3k "
+                             "(hardened: bans broken ComBat/external APIs, adds reference scores), "
+                             "'baseline' otherwise.")
+    parser.add_argument("--initial_seed", default="pca", choices=["pca", "batch_centered"],
+                        help="[pbmc3k] built-in seed candidate: 'pca' (default) or 'batch_centered' "
+                             "(PCA + per-batch mean centering, the ~1.0701 reference).")
     args = parser.parse_args()
 
     import random
     random.seed(args.seed)
+
+    task = args.task
+    prompt_version = args.prompt_version or default_prompt_version(task)
+    args.prompt_version = prompt_version  # persist the resolved value for results.json
+    # Resolve scorer script + per-candidate dataset args by task.
+    scorer_script = args.scorer_script or (
+        DEFAULT_REALDATA_SCORER if task == "pbmc3k" else DEFAULT_SYNTH_SCORER
+    )
+    scorer_extra_args = None
+    if task == "pbmc3k":
+        scorer_extra_args = [
+            "--source", args.source, "--n_cells", args.n_cells, "--n_batches", args.n_batches,
+            "--batch_strength", args.batch_strength, "--n_hvg", args.n_hvg,
+            "--leiden_resolution", args.leiden_resolution, "--seed", args.data_seed,
+        ]
 
     # --- Preconditions ---
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -314,8 +469,8 @@ def main():
     if not scrna_py.exists():
         print(f"[!] scRNA env python not found: {scrna_py}")
         sys.exit(1)
-    if not Path(args.scorer_script).exists():
-        print(f"[!] Scorer script not found: {args.scorer_script}")
+    if not Path(scorer_script).exists():
+        print(f"[!] Scorer script not found: {scorer_script}")
         sys.exit(1)
 
     out_dir = Path(args.out_dir)
@@ -325,20 +480,33 @@ def main():
     (out_dir / "candidates").mkdir(exist_ok=True)
     (out_dir / "candidate_logs").mkdir(exist_ok=True)
 
-    # Resolve the initial (seed) candidate.
+    # Resolve the initial (seed) candidate. Default is plain PCA for EVERY task; the pbmc3k main
+    # experiment must start from PCA so ERA has to discover batch centering itself.
     if args.initial_candidate:
         initial_code = Path(args.initial_candidate).read_text()
         initial_name = Path(args.initial_candidate).name
+    elif task == "pbmc3k":
+        if args.initial_seed == "batch_centered":
+            initial_code = BATCH_CENTERED_SEED_CODE_20
+            initial_name = "batch_centered_pca20 (built-in, opt-in)"
+        else:
+            initial_code = PCA_SEED_CODE_20
+            initial_name = "pca20_baseline (built-in)"
     else:
         initial_code = PCA_SEED_CODE
         initial_name = "pca_baseline (built-in)"
 
+    print(f"Task:           {task}")
     print(f"Out dir:        {out_dir}")
     print(f"Model:          {args.model}")
     print(f"Iterations:     {args.iterations}")
+    print(f"Prompt version: {prompt_version}")
     print(f"Initial seed:   {initial_name}")
     print(f"scRNA python:   {args.scrna_python}")
-    print(f"Scorer script:  {args.scorer_script}")
+    print(f"Scorer script:  {scorer_script}")
+    if task == "pbmc3k":
+        print(f"Dataset:        {args.source} n_cells={args.n_cells} n_batches={args.n_batches} "
+              f"strength={args.batch_strength} data_seed={args.data_seed}")
     print(f"Reward:         reduced score (higher is better)\n")
 
     llm = GeminiLLM(api_key, model_name=args.model)
@@ -351,7 +519,8 @@ def main():
     (out_dir / "initial_candidate.py").write_text(initial_code)
     print(f"=== Scoring initial candidate ({initial_name}) ===")
     init_id = next_id["v"]; next_id["v"] += 1
-    init_res = score_program(initial_code, init_id, out_dir, args.scrna_python, args.scorer_script)
+    init_res = score_program(initial_code, init_id, out_dir, args.scrna_python, scorer_script,
+                             scorer_extra_args=scorer_extra_args)
     initial_solution = futs.Solution(initial_code)
     sol_to_id[id(initial_solution)] = init_id
     initial_score = init_res["reward"]
@@ -373,7 +542,7 @@ def main():
     # --- 2) Generator ---
     def generate_fn(problem, parent_solution, parent_score):
         parent_id = sol_to_id.get(id(parent_solution))
-        prompt = build_generation_prompt(parent_solution.program, parent_score)
+        prompt = build_generation_prompt(parent_solution.program, parent_score, task, prompt_version)
         try:
             code = llm.draw_sample(prompt)
         except Exception as e:  # SafeGenerator behaviour: never crash the whole run
@@ -393,7 +562,8 @@ def main():
         pending = getattr(generate_fn, "_pending", None)
         if pending and pending[0] == cand_id:
             parent_id = pending[1]
-        res = score_program(solution.program, cand_id, out_dir, args.scrna_python, args.scorer_script)
+        res = score_program(solution.program, cand_id, out_dir, args.scrna_python, scorer_script,
+                            scorer_extra_args=scorer_extra_args)
         records.append(CandidateRecord(
             iteration=cand_id, candidate_id=cand_id, parent_id=parent_id,
             valid=res["valid"], reward=res["reward"], score=res["score"],
@@ -454,13 +624,29 @@ def _write_outputs(out_dir, records, args, initial_score, initial_name, best_sco
             row["reward"] = "" if (row["reward"] is None or not math.isfinite(row["reward"])) else row["reward"]
             w.writerow(row)
 
+    task = getattr(args, "task", "synthetic")
+    task_label = ("scRNA PBMC3k real-data batch integration (D3B-alt ERA smoke)"
+                  if task == "pbmc3k"
+                  else "scRNA synthetic batch integration (D2A ERA smoke test)")
+    dataset_params = None
+    if task == "pbmc3k":
+        dataset_params = {
+            "source": args.source, "n_cells": args.n_cells, "n_batches": args.n_batches,
+            "batch_strength": args.batch_strength, "n_hvg": args.n_hvg,
+            "leiden_resolution": args.leiden_resolution, "data_seed": args.data_seed,
+        }
     results = {
-        "task": "scRNA synthetic batch integration (D2A ERA smoke test)",
+        "task": task,
+        "task_label": task_label,
+        "dataset_params": dataset_params,
+        "prompt_version": getattr(args, "prompt_version", None),
         "model": args.model,
         "initial_candidate": initial_name,
         "iterations_requested": args.iterations,
         "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
-        "note": "Synthetic smoke test; NOT the official scIB score. Real data/scIB deferred to D2B.",
+        "note": ("PBMC3k real biology + artificial batch; reduced proxy score, NOT official scIB."
+                 if task == "pbmc3k"
+                 else "Synthetic smoke test; NOT the official scIB score."),
         "aborted": aborted,
         "initial_reward": _safe(initial_score),
         "best_reward": _safe(best_reward),
@@ -477,7 +663,7 @@ def _write_outputs(out_dir, records, args, initial_score, initial_name, best_sco
     }
     (out_dir / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 
-    print("\n=========== scRNA ERA Search Summary (synthetic) ===========")
+    print(f"\n=========== scRNA ERA Search Summary ({task}) ===========")
     print(f"Model:              {args.model}")
     print(f"Initial seed:       {initial_name}")
     print(f"Initial reward:     {initial_score}")
