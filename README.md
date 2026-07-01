@@ -14,6 +14,8 @@ multi-stage answer. It includes:
 4. **A second benchmark — breast-cancer classification** (ERA also beats best-of-N, 3/3).
 5. **Stage 3 — GIFT-Eval**: setting up the official time-series forecasting benchmark, wrapping it
    as an ERA-scorable task, connecting ERA's tree search to it, and an ERA-vs-best-of-N comparison.
+6. **Stage 4 — scRNA-seq batch integration bridge**: synthetic AnnData plus PBMC3k real AnnData with
+   artificial batch effects, reduced Python-only score, ERA smoke, and ERA-vs-best-of-N comparison.
 
 > A `model_ablation.py` script (`gemini-2.5-flash-lite` vs `gemini-2.5-flash`) also exists but was
 > not the main focus and is optional.
@@ -55,6 +57,7 @@ multi-stage answer. It includes:
 | Ablation | A small `flash-lite` vs `flash` model comparison (optional, `model_ablation.py`) |
 | Stage 2 | Second benchmark — breast-cancer classification (ERA beats best-of-N 3/3) |
 | Stage 3 | **GIFT-Eval** — official time-series benchmark setup, ERA-scorable wrapper, ERA integration, and ERA-vs-best-of-N |
+| Stage 4 | **scRNA-seq batch-integration bridge** — synthetic AnnData and PBMC3k real AnnData; ERA rediscovers batch-centered PCA; ERA vs best-of-N ties on the easy PBMC3k proxy task |
 
 ---
 
@@ -171,6 +174,10 @@ To turn a suggestive single run into a defensible result:
 
 ### Phase-3 Summary (中文 / 给导师)
 
+> 📌 **Historical mid-project summary, kept for record.** It reflects the state after the toy-task
+> stages; the "下一步" plan below (GIFT-Eval, scRNA) has since been **completed** — see Stage 3
+> (§7) and Stage 4 (§8).
+
 ### 已完成的工作
 - **成功复现官方 ERA 最小 Demo**：打通 LLM 生成/改写代码 → 本地沙箱执行 → 自动打分（负 RMSE）→ 树搜索迭代 的完整闭环。
 - **绘制搜索进度图**：初始 `-0.7339`，10 次迭代约 `-0.5785`，30 次迭代 `-0.5776`。
@@ -187,7 +194,8 @@ To turn a suggestive single run into a defensible result:
 - **用 `gemini-2.5-flash` 做一次小型消融**，更强模型可能写出更好的代码、减少失败。
 - **暂不使用 `gemini-2.5-pro`**：成本过高，仅在任务明显变难或便宜模型频繁失败时再考虑。
 
-### 下一步
+### 下一步（历史计划，现已完成）
+> 以下为当时的规划，现已落地：**GIFT-Eval 小子集**（Stage 3 / §7）与 **scRNA 桥接任务**（Stage 4 / §8）均已完成。
 从官方玩具 Demo 迁移到更难的小型基准，建议顺序：
 1. 另一个 **Kaggle Playground** 风格任务 → 2. **GIFT-Eval** 小子集 → 3. **scRNA 20k-cell** 搜索设置 → 4. 之后再做论文级别的更大任务。
 
@@ -248,9 +256,9 @@ beyond the first task**.
 
 Stage 3 takes ERA beyond the toy tabular tasks onto a **real public benchmark**:
 [**GIFT-Eval**](https://github.com/SalesforceAIResearch/gift-eval) (Salesforce), a general
-time-series forecasting benchmark. It proceeds in four sub-stages: **C1** stand up the official
-benchmark, **C2** wrap one small task as an ERA-scorable reward, **C3** run ERA tree search on it,
-and **C4** compare ERA vs best-of-N.
+time-series forecasting benchmark. It proceeds in six sub-stages: **C1** official setup, **C2**
+ERA-scorable wrapper, **C3** ERA integration, **C4** `m4_weekly` ERA-vs-best-of-N, **C5** subset
+scouting, and **C6** the `m4_hourly` parametric scorer and positive ERA-vs-best-of-N result.
 
 ### ⚙️ Two-environment architecture (important — please read)
 
@@ -459,8 +467,15 @@ metric.** Two data regimes were run: a **synthetic** AnnData (D1–D2A) and a **
 
 | run | seed → best (reduced-proxy reward) | valid/invalid | note |
 |---|---|---|---|
-| D2A ERA — synthetic, 5-iter | 1.0699 → **1.2793** | 6/0 | lifts toward the batch-centered ref (1.3024) |
+| D2A ERA — synthetic, 5-iter | 1.0699 → **1.2793** | 6/0 | lifts toward the batch-centered reference |
 | D2A ERA — synthetic, 10-iter | 1.0699 → **1.2525** | 10/1 | same direction, one invalid candidate |
+
+> 📎 **Reference numbers (synthetic track).** The batch-centered reference plotted in the figure
+> above is **1.3024**, measured in the **D1 synthetic smoke** (`scrna_d1_synthetic_smoke`, PCA
+> `n_comps=20`; its raw-PCA baseline there is 1.0661). The **D2A** ERA searches instead seed from a
+> log-norm PCA at `n_comps=10` (reward **1.0699**); a separate D2A validation at those settings
+> measured the batch-centered candidate at ≈ **1.3408**. The two reference values (**1.3024** = D1,
+> **1.3408** = D2A validation) come from different PCA settings and should not be conflated.
 | D3B ERA — PBMC3k, 5-iter (pre-hardening) | 1.0275 → 1.0281 | 2/4 | stalled on broken-ComBat / `n_jobs=-1` crashes |
 | **D3B ERA — PBMC3k, 10-iter (hardened)** | 1.0275 → **1.0701** | **11/0** | reaches the batch-centered reference |
 | **D3C ERA vs best-of-N — PBMC3k, N=10** | both → **1.0700699** (tie) | 10/0 each | ERA 1.0700699151 vs BoN 1.0700699166 (~1.4e-9) |
@@ -474,7 +489,8 @@ smoke and the 10-iter run.
 
 **ERA vs best-of-N is a tie here.** Under equal budget (N=10 each,
 [`implementation/scrna_compare_era_vs_bon.py`](implementation/scrna_compare_era_vs_bon.py)), both methods
-were 10/10 valid and both reached the reference: ERA **1.0700699151** vs best-of-N **1.0700699166**. The
+were 10/10 valid and both reached the reference from the PCA-20 seed (reward **1.0274980964**): ERA
+**1.0700699151** vs best-of-N **1.0700699166**. The
 script names best-of-N the "winner", but only by **~1.4e-9** — the two best candidates are the *same*
 method; the gap is a pure `float32` (ERA) vs `float64` (BoN) rounding difference in the two candidate
 programs. 7 of 10 best-of-N draws independently found the same correction.
@@ -522,7 +538,8 @@ Instead, it is a **mechanistic reproduction and extension** showing:
 ### Limitations
 - The local `implementation/sandbox.py` is **not a secure sandbox** (runs LLM code directly).
 - GIFT-Eval scoring ran in a **local terminal + isolated venv**, **not** a secure sandbox.
-- Only **`m4_weekly/W/short`** was tested; the **full GIFT-Eval benchmark was not run**.
+- Only small GIFT-Eval subsets were tested (**`m4_weekly/W/short`** and **`m4_hourly/H/short`**); the
+  **full GIFT-Eval benchmark was not run**.
 - **No foundation-model forecasting baselines** (Moirai/Chronos/etc.) were run.
 - The candidate interface currently uses **simplified point forecasts** (degenerate quantiles for CRPS).
 - **scRNA-seq is only a reduced-proxy PBMC3k bridge** (Stage 4) — the **official 12-metric scIB score,
@@ -592,6 +609,16 @@ python gift_eval_compare_era_vs_bon.py \
     --N 20 \
     --model gemini-2.5-flash \
     --out_dir saved_runs/gift_eval_c4_era_vs_bon_N20
+
+# --- C6B: ERA vs best-of-N on m4_hourly from the weak naive seed (the main positive GIFT-Eval result) ---
+python gift_eval_compare_era_vs_bon.py \
+    --dataset m4_hourly \
+    --freq H \
+    --term short \
+    --initial_seed naive \
+    --N 20 \
+    --model gemini-2.5-flash \
+    --out_dir saved_runs/gift_eval_c6b_era_vs_bon_m4_hourly_naive_N20
 ```
 
 > 🔌 **Why this is correct:** `gift_eval_era_search.py` and `gift_eval_compare_era_vs_bon.py` are
@@ -602,6 +629,49 @@ python gift_eval_compare_era_vs_bon.py \
 
 > 💡 Cost scales as **2 × N × repeats** Gemini calls per comparison run. Keep `N` small. (C3 spends
 > `--iterations` calls; C4 spends `2 × N`.)
+
+### Stage 4 — scRNA-seq (two environments)
+
+Same pattern as GIFT-Eval: the `scrna_*` **controllers** run in the ERA environment (plain `python`)
+and **never import scanpy**; every candidate is scored by subprocess into the isolated **scRNA-env**
+(`/Users/zhangweikun/era/scRNA-env/bin/python`, `scanpy`/`anndata`/numpy < 2).
+
+```bash
+cd /Users/zhangweikun/era/implementation
+
+unset GOOGLE_API_KEY
+export GEMINI_API_KEY="your_key"
+export GEMINI_MODEL=gemini-2.5-flash
+
+# --- PBMC3k ERA search, 10-iter hardened prompt (ERA env controller; scRNA-env scoring internally) ---
+python scrna_era_search.py \
+    --task pbmc3k \
+    --source scanpy_pbmc3k \
+    --n_cells 500 \
+    --iterations 10 \
+    --model gemini-2.5-flash \
+    --prompt_version pbmc3k_conservative_v2 \
+    --out_dir saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative
+
+# --- PBMC3k ERA vs best-of-N, N=10 (2 × N = 20 Gemini calls) ---
+python scrna_compare_era_vs_bon.py \
+    --task pbmc3k \
+    --source scanpy_pbmc3k \
+    --n_cells 500 \
+    --n_batches 3 \
+    --batch_strength 0.8 \
+    --N 10 \
+    --model gemini-2.5-flash \
+    --prompt_version pbmc3k_conservative_v2 \
+    --initial_seed pca \
+    --out_dir saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10
+```
+
+> 🔌 **Why this is correct:** `scrna_era_search.py` and `scrna_compare_era_vs_bon.py` are *controllers*
+> in the ERA environment. They never import `scanpy`/`anndata`; for every candidate they `subprocess`
+> out to `/Users/zhangweikun/era/scRNA-env/bin/python scrna_realdata_task.py`, so all single-cell
+> scoring happens inside the isolated scRNA-env. The PBMC3k download + prepared `.h5ad` cache live in
+> the gitignored `implementation/data/scanpy_cache/`.
 
 ---
 
