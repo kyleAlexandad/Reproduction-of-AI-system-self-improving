@@ -31,10 +31,11 @@ multi-stage answer. It includes:
 5. [Reliability — Repeated Runs](#5-reliability--repeated-runs)
 6. [Stage 2 — Second Benchmark: Breast Cancer](#6-stage-2--second-benchmark-breast-cancer)
 7. [Stage 3 — GIFT-Eval Time-Series Benchmark](#7-stage-3--gift-eval-time-series-benchmark)
-8. [Final Takeaways](#8-final-takeaways)
-9. [How to Run](#9-how-to-run)
-10. [Repository Structure](#10-repository-structure)
-11. [Security Note & Attribution](#11-security-note--attribution)
+8. [Stage 4 — scRNA-seq Batch Integration](#8-stage-4--scrna-seq-batch-integration)
+9. [Final Takeaways](#9-final-takeaways)
+10. [How to Run](#10-how-to-run)
+11. [Repository Structure](#11-repository-structure)
+12. [Security Note & Attribution](#12-security-note--attribution)
 
 ---
 
@@ -439,7 +440,60 @@ process comparison.
 
 ---
 
-## 8. Final Takeaways
+## 8. Stage 4 — scRNA-seq Batch Integration
+
+The fourth stage takes ERA to the upstream **single-cell RNA-seq batch integration** task
+([`implementation/notebooks/single_cell_batch_integration.ipynb`](implementation/notebooks/single_cell_batch_integration.ipynb)).
+Candidates implement `eliminate_batch_effect_fn(adata, config)` returning a batch-corrected embedding
+in `obsm['X_emb']` (raw counts in, 2000 highly-variable genes, **must not use `cell_type`**). The paper
+scores this with the mean of 12 `scib` metrics on a 20,000-cell subsample, which needs R/`kBET` and the
+private ~3 GB Kaggle dataset — **both deferred**. Instead we reuse the same **two-environment
+architecture** as GIFT-Eval (controller in the ERA env; every candidate scored by subprocess into an
+isolated `scRNA-env` with `scanpy`/`anndata`/numpy < 2, never importing scanpy into the ERA env) and
+score with a **reduced Python-only proxy** — `reward = bio_score + batch_mixing_score`, higher is
+better (cell types stay separable while batches mix). **This proxy is a bridge, not the official scIB
+metric.** Two data regimes were run: a **synthetic** AnnData (D1–D2A) and a **real public bridge** —
+10x **PBMC3k** biology with a *controlled artificial batch* injected into the counts (D3A–D3C).
+
+![scRNA arc: ERA reduced-proxy reward across stages D1→D3C](implementation/saved_runs/scrna_summary/scrna_arc_summary.png)
+
+| run | seed → best (reduced-proxy reward) | valid/invalid | note |
+|---|---|---|---|
+| D2A ERA — synthetic, 5-iter | 1.0699 → **1.2793** | 6/0 | lifts toward the batch-centered ref (1.3024) |
+| D2A ERA — synthetic, 10-iter | 1.0699 → **1.2525** | 10/1 | same direction, one invalid candidate |
+| D3B ERA — PBMC3k, 5-iter (pre-hardening) | 1.0275 → 1.0281 | 2/4 | stalled on broken-ComBat / `n_jobs=-1` crashes |
+| **D3B ERA — PBMC3k, 10-iter (hardened)** | 1.0275 → **1.0701** | **11/0** | reaches the batch-centered reference |
+| **D3C ERA vs best-of-N — PBMC3k, N=10** | both → **1.0700699** (tie) | 10/0 each | ERA 1.0700699151 vs BoN 1.0700699166 (~1.4e-9) |
+
+**What ERA learned.** On PBMC3k, ERA's best program (D3B, candidate 1) is exactly **normalize-total →
+log1p → PCA(20) → subtract each batch's mean vector in the embedding space** — it independently
+**rediscovered the hand-written batch-centered-PCA reference**, matching its score (≈ 1.070070) to full
+precision. The hardened `pbmc3k_conservative_v2` prompt (which bans the broken ComBat/external APIs and
+points at reliable numpy/sklearn/scanpy blocks) took invalids from **4/6 → 0/11** between the 5-iter
+smoke and the 10-iter run.
+
+**ERA vs best-of-N is a tie here.** Under equal budget (N=10 each,
+[`implementation/scrna_compare_era_vs_bon.py`](implementation/scrna_compare_era_vs_bon.py)), both methods
+were 10/10 valid and both reached the reference: ERA **1.0700699151** vs best-of-N **1.0700699166**. The
+script names best-of-N the "winner", but only by **~1.4e-9** — the two best candidates are the *same*
+method; the gap is a pure `float32` (ERA) vs `float64` (BoN) rounding difference in the two candidate
+programs. 7 of 10 best-of-N draws independently found the same correction.
+
+**Why it's a tie (and that's expected).** Unlike GIFT-Eval `m4_hourly`, where the winning structure was
+*deep* (period-24 seasonality) and ERA's tree search paid off, here the reduced-proxy optimum for simple
+heuristics *is* batch-centered PCA and it sits **one hop from the PCA seed** — trivially discoverable, so
+tree search and independent sampling both reach it reliably. This mirrors the `m4_weekly` pattern
+(near-optimal seed → ERA ties, never loses). The consolidated figure above is regenerated from the saved
+`results.json` files by [`implementation/scrna_plot_summary.py`](implementation/scrna_plot_summary.py)
+(no Gemini); per-run outputs live under `saved_runs/scrna_d3b_*` and `saved_runs/scrna_d3c_*`.
+
+> **Deferred (the real paper benchmark):** the official Kaggle dataset, R/`kBET`, and the 12-metric scIB
+> score on 20k cells. PBMC3k + the reduced proxy is a lightweight bridge that validates the full
+> ERA → scorer → FUTS loop on *real* single-cell data end-to-end.
+
+---
+
+## 9. Final Takeaways
 
 This project is **not** a full reproduction of the Nature paper's full-scale experiments (e.g.
 scRNA-seq, COVID forecasting, the full GIFT-Eval benchmark, geospatial segmentation, or ZAPBench).
@@ -459,6 +513,11 @@ Instead, it is a **mechanistic reproduction and extension** showing:
    naive seed it **discovered daily seasonality (period 24)**, reaching MASE **1.1384** (vs naive
    **11.61**, and below the seasonal-naive reference 1.1932), and again **beat best-of-N**
    (1.1932 vs 1.3651). This is the project's main *positive* GIFT-Eval result.
+10. **Stage 4 (scRNA-seq)** wired the same two-environment ERA loop onto *real* single-cell data (a
+    PBMC3k bridge with a reduced proxy score). ERA **independently rediscovered batch-centered PCA**
+    (PCA-20 seed 1.0275 → 1.0701, 11/11 valid after prompt hardening), and ERA vs best-of-N was an
+    **effective tie** (both 10/0 valid, both reached the reference; ~1.4e-9 apart) — expected, since
+    the proxy optimum sits one hop from the seed. Official scIB scoring remains deferred.
 
 ### Limitations
 - The local `implementation/sandbox.py` is **not a secure sandbox** (runs LLM code directly).
@@ -466,93 +525,13 @@ Instead, it is a **mechanistic reproduction and extension** showing:
 - Only **`m4_weekly/W/short`** was tested; the **full GIFT-Eval benchmark was not run**.
 - **No foundation-model forecasting baselines** (Moirai/Chronos/etc.) were run.
 - The candidate interface currently uses **simplified point forecasts** (degenerate quantiles for CRPS).
-- **No scRNA / COVID / geospatial / ZAPBench** reproduction yet.
+- **scRNA-seq is only a reduced-proxy PBMC3k bridge** (Stage 4) — the **official 12-metric scIB score,
+  R/`kBET`, and the real Kaggle dataset are deferred**. **No COVID / geospatial / ZAPBench** yet.
 - The **API budget was small** (results are consistent, not tight statistical claims).
-
-### Next planned stage — scRNA-seq batch integration
-
-The next large stage targets the upstream ERA **single-cell RNA-seq batch integration** task, whose
-official notebook already ships in this repo at
-[`implementation/notebooks/single_cell_batch_integration.ipynb`](implementation/notebooks/single_cell_batch_integration.ipynb).
-The candidate interface is `eliminate_batch_effect_fn(adata, config)` returning a batch-corrected
-embedding in `obsm['X_emb']` (raw counts in, 2000 highly-variable genes, must not use `cell_type`),
-scored by the **mean of 12 `scib` integration metrics** (higher is better) on a **20,000-cell
-subsample**. It requires its **own isolated environment** (`scanpy`/`anndata`/`scib` + R/`kBET`,
-numpy < 2) — separate from both the ERA and GIFT-Eval environments. Reconnaissance/planning is
-complete. A first setup + **synthetic Python-only smoke test** is also done: an isolated env
-(`scRNA-env`, Python 3.11 with `scanpy`/`anndata`/`scib`) plus
-[`implementation/scrna_synthetic_smoke.py`](implementation/scrna_synthetic_smoke.py), which builds a
-synthetic 300-cell / 3-batch / 3-cell-type AnnData, runs candidates through the
-`eliminate_batch_effect_fn` interface, scores them with a lightweight batch-mixing + biology-preservation
-proxy (a batch-corrected PCA beats raw PCA; invalid candidates are caught), and writes
-`saved_runs/scrna_d1_synthetic_smoke/results.{json,csv}`. This is **not** the official scIB metric —
-real scIB scoring (with R/`kBET`) and the real dataset are the next step.
-
-On top of that, the same **two-environment ERA architecture** used for GIFT-Eval is now wired for the
-synthetic scRNA task: `implementation/scrna_synthetic_task.py` is an ERA-scorable scorer (runs in
-`scRNA-env`; reward = the reduced score, higher is better), and `implementation/scrna_era_search.py`
-is the ERA/FUTS + Gemini controller (runs in the ERA env, scores each candidate by subprocess into
-`scRNA-env`). The controller starts from a PCA baseline and asks the LLM to improve
-`eliminate_batch_effect_fn`. The subprocess bridge and invalid-candidate handling are validated
-without Gemini; the small ERA run itself is launched manually with a `GEMINI_API_KEY`.
-
-The **real-data path** is also wired: `implementation/scrna_realdata_smoke.py` loads the real
-GIFT-style `*-train-dataset.h5ad` (raw counts in `layers/counts`, `obs['batch']` + `obs['cell_type']`),
-subsamples to a tiny cell count, and runs the same candidate interface + reduced proxy score. The real
-Kaggle dataset is not bundled, so the script fails gracefully with exact download-and-placement
-instructions when the file is absent; the code path itself is verified on a structurally-identical
-synthetic `.h5ad`. Real `scib` scoring (with R/`kBET`) remains the deferred next step.
-
-Because the official Kaggle dataset is private and ~3 GB, `scrna_realdata_smoke.py` also offers a
-lightweight **public real-data** source (`--source scanpy_pbmc3k`): it pulls 10x PBMC3k (~5 MB via
-`scanpy`), uses Leiden clusters as a proxy `cell_type`, injects a controlled artificial batch effect,
-and runs the same candidate interface + reduced score. On 500 cells the batch-centered PCA again beats
-plain PCA — confirming a *real* AnnData flows cleanly through the ERA-style pipeline, as a bridge
-toward the full paper-scale scRNA benchmark.
-
-This PBMC3k task is also wired into the ERA search loop: `implementation/scrna_realdata_task.py` is an
-ERA-scorable scorer that builds a deterministic (cached) prepared PBMC3k AnnData, and
-`scrna_era_search.py --task pbmc3k` drives Gemini + FUTS against it (scoring each candidate by
-subprocess into `scRNA-env`), starting from a PCA baseline (reward ≈ 1.0275). The two-environment
-bridge and invalid handling are validated without Gemini; the small ERA run is launched manually.
-
-**Real-data ERA run result (PBMC3k, 10 iterations, `gemini-2.5-flash`).** With the hardened
-`pbmc3k_conservative_v2` prompt, a 10-iteration ERA search (500 cells, 3 batches, 2000 HVG) lifted the
-PCA-20 seed from reward **1.0275** (bio 0.559, batch-mixing 0.468) to a best of **1.0701** (bio 0.567,
-batch-mixing 0.503), with **11/11 candidates valid** (zero invalid — the prompt hardening removed the
-broken-ComBat / `n_jobs=-1` crashes that produced 4/6 invalids in the earlier 5-iteration smoke). The
-winning candidate (id 1) is exactly **normalize-total → log1p → PCA(20) → per-batch mean-centering in
-the embedding space** — i.e. ERA independently rediscovered the hand-written batch-centered-PCA
-reference, matching its score (≈ 1.070070) to full precision. Outputs in
-`saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/`. This is on the reduced proxy score (not the
-official 12-metric scIB); the official Kaggle dataset + scIB (with R/`kBET`) remain the deferred next
-step.
-
-**ERA vs best-of-N on PBMC3k (N=10 run — an effective tie).** The same fair-comparison harness used
-for GIFT-Eval is wired for this task: [`implementation/scrna_compare_era_vs_bon.py`](implementation/scrna_compare_era_vs_bon.py)
-runs ERA tree search and best-of-N independent sampling under an **equal budget** (N Gemini calls each),
-sharing the same model, `pbmc3k_conservative_v2` prompt, PCA-20 seed, scorer subprocess, and reduced
-reward — the only difference is that ERA conditions each candidate on a FUTS tree-selected parent
-(sequential feedback) while best-of-N always samples from the same fixed seed prompt. It reuses the
-D3B scorer bridge (never importing scanpy into the ERA env) and reports best reward, Δ-vs-seed, and
-valid/invalid counts per method.
-
-On the N=10 run (seed reward 1.027498), **both methods were 10/10 valid** and both reached the
-batch-centered reference: **ERA best-generated 1.0700699151** vs **best-of-N best-generated
-1.0700699166**. The script names best-of-N the winner, but only by ~1.4e-9 — an **effective tie**. Both
-best candidates are the *same* method (normalize-total → log1p → PCA(20) → per-batch mean-centering in
-the embedding space, i.e. the batch-centered-PCA reference); the microscopic gap is purely a
-`float32`-vs-`float64` rounding difference in the two candidates, not a methodological one, and 7 of 10
-best-of-N draws independently rediscovered that same correction. On this PBMC3k bridge the
-reduced-proxy optimum for simple heuristics *is* batch-centered PCA and it is trivially discoverable
-from the PCA seed, so — unlike GIFT-Eval `m4_hourly`, where the winning structure was deep — ERA's
-tree-search advantage does not manifest here; both methods reach the optimum reliably. Outputs in
-`saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/` (`results.json`, `summary.csv`, `progress_{era,bon}.csv`,
-`era_vs_bon_reward.png`).
 
 ---
 
-## 9. How to Run
+## 10. How to Run
 
 ```bash
 cd implementation
@@ -626,7 +605,7 @@ python gift_eval_compare_era_vs_bon.py \
 
 ---
 
-## 10. Repository Structure
+## 11. Repository Structure
 
 ```
 implementation/
@@ -647,6 +626,13 @@ implementation/
 ├── gift_eval_era_search.py               # Stage-3 C3/C6: ERA/FUTS controller (ERA env; subprocess scoring)
 ├── gift_eval_compare_era_vs_bon.py       # Stage-3 C4/C6: ERA vs best-of-N on GIFT-Eval
 ├── initial_candidate_conservative.py     # optional conservative seed candidate (Stage-3)
+├── scrna_synthetic_smoke.py              # Stage-4 D1: synthetic scRNA smoke (reduced proxy)
+├── scrna_synthetic_task.py               # Stage-4 D2A: synthetic scorer (scRNA-env)
+├── scrna_realdata_smoke.py               # Stage-4 D3A: real-data smoke (--source scanpy_pbmc3k)
+├── scrna_realdata_task.py                # Stage-4 D3B: PBMC3k scorer (scRNA-env)
+├── scrna_era_search.py                   # Stage-4 D2A/D3B: ERA/FUTS controller (ERA env; subprocess scoring)
+├── scrna_compare_era_vs_bon.py           # Stage-4 D3C: ERA vs best-of-N on PBMC3k
+├── scrna_plot_summary.py                 # Stage-4: consolidated scRNA figure (reads results.json)
 └── saved_runs/
     ├── playground_s3e1_iter30/              # Stage-1 Part-1 report + figures
     ├── era_vs_bon/                          # Stage-1 Part-2 report + figures
@@ -668,17 +654,27 @@ implementation/
     ├── gift_eval_c6a_parametric_scorer/     # Stage-3 C6A: parametric scorer validation
     ├── gift_eval_c6b_era_m4_hourly_naive_iter10/       # Stage-3 C6B: ERA-only on m4_hourly
     ├── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N10/   # Stage-3 C6B: ERA vs best-of-N (N=10)
-    └── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N20/   # Stage-3 C6B: ERA vs best-of-N (N=20)
+    ├── gift_eval_c6b_era_vs_bon_m4_hourly_naive_N20/   # Stage-3 C6B: ERA vs best-of-N (N=20)
+    ├── scrna_d1_synthetic_smoke/            # Stage-4 D1: synthetic smoke results
+    ├── scrna_d2a_synthetic_era_smoke/       # Stage-4 D2A: synthetic ERA (5-iter)
+    ├── scrna_d2a_synthetic_era_iter10/      # Stage-4 D2A: synthetic ERA (10-iter)
+    ├── scrna_d3a_realdata_smoke/            # Stage-4 D3A: PBMC3k real-data smoke
+    ├── scrna_d3b_pbmc3k_era_smoke/          # Stage-4 D3B: PBMC3k ERA (5-iter, pre-hardening)
+    ├── scrna_d3b_pbmc3k_era_iter10_conservative/  # Stage-4 D3B: PBMC3k ERA (10-iter, hardened → 1.0701)
+    ├── scrna_d3c_pbmc3k_era_vs_bon_N10/     # Stage-4 D3C: ERA vs best-of-N (N=10)
+    └── scrna_summary/                       # Stage-4: consolidated figure (scrna_arc_summary.png/pdf/json)
 ```
 
 > 🗂️ **External (not tracked):** `/Users/zhangweikun/era/gift-eval/` is a third-party clone of the
 > official [`SalesforceAIResearch/gift-eval`](https://github.com/SalesforceAIResearch/gift-eval) repo,
 > with its **own venv and downloaded data**. It is intentionally **gitignored** (`/gift-eval/`) and
-> must remain so — it is the isolated GIFT-Eval environment used for scoring.
+> must remain so — it is the isolated GIFT-Eval environment used for scoring. Likewise the Stage-4
+> `scRNA-env/` (isolated `scanpy`/`anndata` venv, numpy < 2) and `implementation/data/scanpy_cache/`
+> (downloaded PBMC3k + cached prepared `.h5ad`) are **gitignored** and never committed.
 
 ---
 
-## 11. Security Note & Attribution
+## 12. Security Note & Attribution
 
 - ⚠️ **`sandbox.py` is not a secure sandbox.** It executes LLM-generated Python directly with your
   user permissions. Toy reproduction only — use real isolation (Docker / firejail / gVisor / a VM)

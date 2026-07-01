@@ -1093,3 +1093,18 @@ share an env. So:
   each method is in `summary.csv` / `results.json`.) Committed + pushed to repro/main (`scRNA-env`,
   gift-eval, Kaggle tokens, `scanpy_cache`, `__pycache__`, `.h5ad` stay ignored/out).
 - **Still deferred (unchanged):** official Kaggle 3GB dataset + official 12-metric scIB (needs R/kBET).
+
+### 14.16 scRNA consolidated figure + README Stage-4 section (DONE, 2026-07-01)
+- **Figure:** `implementation/scrna_plot_summary.py` (ERA env; reads the saved `results.json` files, NO
+  Gemini/scanpy) draws ONE two-panel figure → `saved_runs/scrna_summary/scrna_arc_summary.{png,pdf}`
+  (+ `scrna_arc_summary.json`). Panel A = synthetic track (D2A ERA 5/10-iter vs log-norm PCA seed
+  1.0699 and batch-centered ref 1.3024); Panel B = PBMC3k real bridge (D3B 5-iter 2/4, D3B 10-iter
+  11/0 → 1.0701, D3C ERA & best-of-N 10/0 each) vs PCA-20 seed 1.0275 and batch-centered ref 1.0701.
+- **README restructure (root, per docs policy — no new md files):** scRNA was promoted from a prose
+  blob under "Final Takeaways" to a proper top-level **`## 8. Stage 4 — scRNA-seq Batch Integration`**
+  section (table + embedded figure + "What ERA learned / tie / why" analysis), matching the GIFT-Eval
+  style. Sections renumbered: Final Takeaways §8→§9, How to Run §9→§10, Repo Structure §10→§11,
+  Security §11→§12; ToC updated; Takeaways got a scRNA item #10; the stale "No scRNA … yet" limitation
+  fixed; the repo-structure tree now lists the `scrna_*` scripts + `saved_runs/scrna_*` dirs; and the
+  "External (not tracked)" note now also covers `scRNA-env/` + `data/scanpy_cache/`.
+- Committed + pushed to repro/main.
