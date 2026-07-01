@@ -1,0 +1,7 @@
+iteration,candidate_id,parent_id,valid,reward,score,bio_score,batch_mixing_score,embedding_shape,runtime_s,candidate_path,error
+0,0,,True,1.027498096358162,1.027498096358162,0.5593490679633668,0.468149028394795,"[500, 20]",2.118,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_000.py,
+1,1,0,True,1.028066096928793,1.028066096928793,0.5214850201405821,0.506581076788211,"[500, 50]",2.739,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_001.py,
+2,2,1,False,,,,,,1.226,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_002.py,AttributeError: module 'scanpy.external.pp' has no attribute 'combat'
+3,3,1,False,,,,,,1.207,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_003.py,AttributeError: combat
+4,4,1,False,,,,,,1.409,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_004.py,AttributeError: combat
+5,5,1,False,,,,,,1.382,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_005.py,ValueError: number sections must be larger than 0.

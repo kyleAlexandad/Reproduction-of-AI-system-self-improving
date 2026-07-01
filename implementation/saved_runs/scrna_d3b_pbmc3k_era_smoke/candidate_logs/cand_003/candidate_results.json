@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D3B-alt PBMC3k ERA-scorable scorer)",
+    "note": "Reduced Python-only proxy; NOT official scIB. Real biology (PBMC3k) + artificial batch; NO R/kBET, NO Kaggle HCA dataset.",
+    "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+    "dataset": {
+      "source": "scanpy_pbmc3k",
+      "n_cells": 500,
+      "n_genes": 2000,
+      "n_batches": 3,
+      "batch_strength": 0.8,
+      "n_hvg": 2000,
+      "leiden_resolution": 1.0,
+      "seed": 42
+    },
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "cand_003.py",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_003.py",
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "bio_silhouette": null,
+      "batch_silhouette": null,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": null,
+      "embedding_shape": null,
+      "error": "AttributeError: combat",
+      "runtime_s": 0.0166,
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/zhangweikun/era/implementation/scrna_realdata_task.py\", line 117, in evaluate_candidate\n    out = fn(model_input, config)\n          ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_003.py\", line 51, in eliminate_batch_effect_fn\n    sc.tl.combat(adata_hvg, key='batch')\n    ^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/tools/__init__.py\", line 38, in __getattr__\n    raise AttributeError(name)\nAttributeError: combat\n"
+    }
+  ]
+}

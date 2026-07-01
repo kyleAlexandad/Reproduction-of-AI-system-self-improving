@@ -1,7 +1,7 @@
 
 # Claude Recap
 
-> Last updated: 2026-06-30. Repo: `/Users/zhangweikun/era` (git root).
+> Last updated: 2026-07-01. Repo: `/Users/zhangweikun/era` (git root).
 > Working subfolder for all reproduction code: `/Users/zhangweikun/era/implementation`.
 > Latest milestone: **GIFT-Eval Stage C: C1–C5 done** — C1 setup, C2 scorer, C3 ERA search, C4 ERA
 > vs best-of-N (all on m4_weekly where naive is near-optimal: ERA tied naive and beat best-of-N at
@@ -67,7 +67,16 @@
 > + a `regress_out(n_jobs=-1)` crash. **D3B.1 DONE (2026-06-30):** hardened the pbmc3k prompt
 > (`--prompt_version pbmc3k_conservative_v2`, now default for pbmc3k) — bans those broken APIs, lists
 > only reliable blocks, gives measured refs (PCA 1.0275, batch-centered 1.0701). Non-Gemini validated;
-> user runs the 10-iter retry. Still UNCOMMITTED (no push requested). Details in **§14.13**.
+> user runs the 10-iter retry. Details in **§14.13**.
+>
+> **D3B-alt 10-iter conservative run (user, 2026-07-01) — STRONG SUCCESS.** With
+> `pbmc3k_conservative_v2` the 10-iter ERA search lifted the PCA-20 seed **1.027498 → best 1.070070**
+> (best candidate id **1**), **11/11 valid (0 invalid)** — the prompt hardening eliminated ALL
+> ComBat/`n_jobs=-1` crashes (vs 4/6 invalid in the 5-iter smoke). Postmortem: cand 1 =
+> normalize_total→log1p→PCA(20)→**per-batch mean-centering in the PC embedding space** = exactly the
+> hand-written batch-centered-PCA reference, matching its 1.070070 to full precision. So ERA
+> rediscovered the reference correction on real PBMC3k biology. Committed + pushed to repro/main.
+> Details in **§14.14**.
 >
 > DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
 > files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
@@ -961,3 +970,34 @@ share an env. So:
   --n_cells 500 --iterations 10 --model gemini-2.5-flash --prompt_version pbmc3k_conservative_v2
   --out_dir saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative`. Success: invalid < 4/6; best > 1.0275;
   strong if best ≈/≥ 1.0701.
+
+### 14.14 D3B-alt — PBMC3k 10-iter conservative ERA run RESULT (DONE; user ran Gemini) — STRONG SUCCESS
+- **Command (user, 2026-07-01):** `python scrna_era_search.py --task pbmc3k --source scanpy_pbmc3k
+  --n_cells 500 --iterations 10 --model gemini-2.5-flash --prompt_version pbmc3k_conservative_v2
+  --out_dir saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative`.
+- **Headline numbers** (`results.json` / `progress.csv`): initial PCA-20 reward **1.027498096358162**
+  (bio 0.559349, batch_mix 0.468149) → **best reward 1.070069915149361** (best_candidate_id **1**,
+  bio 0.566949, batch_mix 0.503121); improvement +0.042572; **valid/invalid = 11/0**; model
+  gemini-2.5-flash; prompt_version pbmc3k_conservative_v2; reduced proxy score (NOT official scIB).
+  This **matches the hand-written batch-centered-PCA reference (1.070070) to full precision** and
+  clears BOTH success bars (best > 1.0275; strong-target ≥ 1.0701).
+- **Postmortem — what candidate id 1 (== `best_candidate.py`, verified byte-identical) does:**
+  1. `sc.pp.normalize_total(target_sum=1e4)` → 2. `sc.pp.log1p` → 3. densify + float32 →
+  4. `PCA(n_components=min(20,…), random_state=0)` → 5. **per-batch mean subtraction in the PC
+  embedding space** (for each unique `obs['batch']`, subtract that batch's centroid from its cells'
+  PC coordinates) → store `obsm['X_emb']`. It uses only `scanpy` + `sklearn.PCA` + numpy, never
+  `cell_type`, and never touches a banned API. **→ Confirmed: this is effectively PCA + batch mean
+  centering** (centering done in the PCA embedding, not the raw expression space) — i.e. ERA
+  re-derived the reference `batch_centered_pca` correction, not a different method.
+- **Search behaviour:** FUTS chain 0→1 found the 1.070070 optimum immediately at iter 1 (parent =
+  seed); most later nodes (cand 2–5, 7, 9, 10) landed on a near-identical **1.068821** variant
+  (marginally different centering/scaling), cand 6 re-derived the exact 1.070070 method from a
+  different parent, cand 8 dipped to 1.056517. Best stayed at cand 1's 1.070070 throughout. The key
+  win vs the 5-iter smoke: **0 invalid** — the hardened prompt's API bans held across all 10 gens.
+- **Docs/commit:** README §8 "Next planned stage" got a "Real-data ERA run result" paragraph; this
+  recap header + §14.14 updated. D3B.1 code was already committed (`a1df155`); this stage commits the
+  run outputs (`saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/` + the earlier
+  `saved_runs/scrna_d3b_pbmc3k_era_smoke/`) + the doc updates and pushes to repro/main. `__pycache__`,
+  `scRNA-env`, gift-eval, Kaggle tokens, and `implementation/data/scanpy_cache/` stay gitignored/out.
+- **Still deferred (unchanged):** official Kaggle 3GB dataset + official 12-metric scIB (needs R/kBET);
+  optional ERA-vs-best-of-N on pbmc3k.

@@ -1,0 +1,5 @@
+valid=False reward=None error=ValueError: number sections must be larger than 0. [cand_005.py]
+
+--- STDERR ---
+/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_highly_variable_genes.py:75: UserWarning: `flavor='seurat_v3'` expects raw count data, but non-integers were found.
+  warnings.warn(

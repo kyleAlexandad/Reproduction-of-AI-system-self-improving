@@ -1,0 +1,5 @@
+valid=False reward=None error=AttributeError: combat [cand_003.py]
+
+--- STDERR ---
+/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_highly_variable_genes.py:412: UserWarning: `n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.
+  warnings.warn(msg, UserWarning)

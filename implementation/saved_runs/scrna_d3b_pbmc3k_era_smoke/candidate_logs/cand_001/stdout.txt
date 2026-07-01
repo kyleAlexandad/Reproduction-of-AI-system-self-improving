@@ -1,0 +1,5 @@
+valid=True score=1.028066 reward=1.028066 bio=0.5215 batch_mix=0.5066 emb=[500, 50] [cand_001.py]
+
+--- STDERR ---
+/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_highly_variable_genes.py:412: UserWarning: `n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.
+  warnings.warn(msg, UserWarning)

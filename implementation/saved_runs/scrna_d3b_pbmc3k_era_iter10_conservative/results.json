@@ -1,0 +1,217 @@
+{
+  "task": "pbmc3k",
+  "task_label": "scRNA PBMC3k real-data batch integration (D3B-alt ERA smoke)",
+  "dataset_params": {
+    "source": "scanpy_pbmc3k",
+    "n_cells": 500,
+    "n_batches": 3,
+    "batch_strength": 0.8,
+    "n_hvg": 2000,
+    "leiden_resolution": 1.0,
+    "data_seed": 42
+  },
+  "prompt_version": "pbmc3k_conservative_v2",
+  "model": "gemini-2.5-flash",
+  "initial_candidate": "pca20_baseline (built-in)",
+  "iterations_requested": 10,
+  "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+  "note": "PBMC3k real biology + artificial batch; reduced proxy score, NOT official scIB.",
+  "aborted": false,
+  "initial_reward": 1.027498096358162,
+  "best_reward": 1.070069915149361,
+  "best_score": 1.070069915149361,
+  "best_candidate_id": 1,
+  "num_candidates_total": 11,
+  "num_valid": 11,
+  "num_invalid": 0,
+  "improvement_over_initial": 0.04257181879119898,
+  "records": [
+    {
+      "iteration": 0,
+      "candidate_id": 0,
+      "parent_id": null,
+      "valid": true,
+      "reward": 1.027498096358162,
+      "score": 1.027498096358162,
+      "bio_score": 0.5593490679633668,
+      "batch_mixing_score": 0.468149028394795,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_000.py",
+      "runtime_s": 2.088
+    },
+    {
+      "iteration": 1,
+      "candidate_id": 1,
+      "parent_id": 0,
+      "valid": true,
+      "reward": 1.070069915149361,
+      "score": 1.070069915149361,
+      "bio_score": 0.5669490173459053,
+      "batch_mixing_score": 0.5031208978034556,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_001.py",
+      "runtime_s": 1.969
+    },
+    {
+      "iteration": 2,
+      "candidate_id": 2,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_002.py",
+      "runtime_s": 1.417
+    },
+    {
+      "iteration": 3,
+      "candidate_id": 3,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_003.py",
+      "runtime_s": 1.449
+    },
+    {
+      "iteration": 4,
+      "candidate_id": 4,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.068820749875158,
+      "score": 1.068820749875158,
+      "bio_score": 0.5655190944671631,
+      "batch_mixing_score": 0.503301655407995,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_004.py",
+      "runtime_s": 1.942
+    },
+    {
+      "iteration": 5,
+      "candidate_id": 5,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_005.py",
+      "runtime_s": 1.384
+    },
+    {
+      "iteration": 6,
+      "candidate_id": 6,
+      "parent_id": 5,
+      "valid": true,
+      "reward": 1.070069915149361,
+      "score": 1.070069915149361,
+      "bio_score": 0.5669490173459053,
+      "batch_mixing_score": 0.5031208978034556,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_006.py",
+      "runtime_s": 1.401
+    },
+    {
+      "iteration": 7,
+      "candidate_id": 7,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_007.py",
+      "runtime_s": 1.523
+    },
+    {
+      "iteration": 8,
+      "candidate_id": 8,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.0565171046182513,
+      "score": 1.0565171046182513,
+      "bio_score": 0.5532041601836681,
+      "batch_mixing_score": 0.5033129444345832,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_008.py",
+      "runtime_s": 1.428
+    },
+    {
+      "iteration": 9,
+      "candidate_id": 9,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_009.py",
+      "runtime_s": 1.329
+    },
+    {
+      "iteration": 10,
+      "candidate_id": 10,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.0688207710627466,
+      "score": 1.0688207710627466,
+      "bio_score": 0.5655191168189049,
+      "batch_mixing_score": 0.5033016542438418,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/candidates/cand_010.py",
+      "runtime_s": 1.868
+    }
+  ]
+}

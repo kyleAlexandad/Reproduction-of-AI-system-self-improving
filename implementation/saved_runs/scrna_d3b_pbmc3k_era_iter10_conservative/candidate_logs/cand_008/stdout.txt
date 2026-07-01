@@ -1,0 +1,3 @@
+valid=True score=1.056517 reward=1.056517 bio=0.5532 batch_mix=0.5033 emb=[500, 20] [cand_008.py]
+
+--- STDERR ---

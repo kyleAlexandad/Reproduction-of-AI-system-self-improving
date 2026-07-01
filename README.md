@@ -516,6 +516,18 @@ ERA-scorable scorer that builds a deterministic (cached) prepared PBMC3k AnnData
 subprocess into `scRNA-env`), starting from a PCA baseline (reward ≈ 1.0275). The two-environment
 bridge and invalid handling are validated without Gemini; the small ERA run is launched manually.
 
+**Real-data ERA run result (PBMC3k, 10 iterations, `gemini-2.5-flash`).** With the hardened
+`pbmc3k_conservative_v2` prompt, a 10-iteration ERA search (500 cells, 3 batches, 2000 HVG) lifted the
+PCA-20 seed from reward **1.0275** (bio 0.559, batch-mixing 0.468) to a best of **1.0701** (bio 0.567,
+batch-mixing 0.503), with **11/11 candidates valid** (zero invalid — the prompt hardening removed the
+broken-ComBat / `n_jobs=-1` crashes that produced 4/6 invalids in the earlier 5-iteration smoke). The
+winning candidate (id 1) is exactly **normalize-total → log1p → PCA(20) → per-batch mean-centering in
+the embedding space** — i.e. ERA independently rediscovered the hand-written batch-centered-PCA
+reference, matching its score (≈ 1.070070) to full precision. Outputs in
+`saved_runs/scrna_d3b_pbmc3k_era_iter10_conservative/`. This is on the reduced proxy score (not the
+official 12-metric scIB); the official Kaggle dataset + scIB (with R/`kBET`) remain the deferred next
+step.
+
 ---
 
 ## 9. How to Run

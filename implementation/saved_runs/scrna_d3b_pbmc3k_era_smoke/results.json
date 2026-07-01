@@ -1,0 +1,119 @@
+{
+  "task": "pbmc3k",
+  "task_label": "scRNA PBMC3k real-data batch integration (D3B-alt ERA smoke)",
+  "dataset_params": {
+    "source": "scanpy_pbmc3k",
+    "n_cells": 500,
+    "n_batches": 3,
+    "batch_strength": 0.8,
+    "n_hvg": 2000,
+    "leiden_resolution": 1.0,
+    "data_seed": 42
+  },
+  "model": "gemini-2.5-flash",
+  "initial_candidate": "pca20_baseline (built-in)",
+  "iterations_requested": 5,
+  "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+  "note": "PBMC3k real biology + artificial batch; reduced proxy score, NOT official scIB.",
+  "aborted": false,
+  "initial_reward": 1.027498096358162,
+  "best_reward": 1.028066096928793,
+  "best_score": 1.028066096928793,
+  "best_candidate_id": 1,
+  "num_candidates_total": 6,
+  "num_valid": 2,
+  "num_invalid": 4,
+  "improvement_over_initial": 0.0005680005706309998,
+  "records": [
+    {
+      "iteration": 0,
+      "candidate_id": 0,
+      "parent_id": null,
+      "valid": true,
+      "reward": 1.027498096358162,
+      "score": 1.027498096358162,
+      "bio_score": 0.5593490679633668,
+      "batch_mixing_score": 0.468149028394795,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_000.py",
+      "runtime_s": 2.118
+    },
+    {
+      "iteration": 1,
+      "candidate_id": 1,
+      "parent_id": 0,
+      "valid": true,
+      "reward": 1.028066096928793,
+      "score": 1.028066096928793,
+      "bio_score": 0.5214850201405821,
+      "batch_mixing_score": 0.506581076788211,
+      "embedding_shape": [
+        500,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_001.py",
+      "runtime_s": 2.739
+    },
+    {
+      "iteration": 2,
+      "candidate_id": 2,
+      "parent_id": 1,
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "embedding_shape": null,
+      "error": "AttributeError: module 'scanpy.external.pp' has no attribute 'combat'",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_002.py",
+      "runtime_s": 1.226
+    },
+    {
+      "iteration": 3,
+      "candidate_id": 3,
+      "parent_id": 1,
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "embedding_shape": null,
+      "error": "AttributeError: combat",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_003.py",
+      "runtime_s": 1.207
+    },
+    {
+      "iteration": 4,
+      "candidate_id": 4,
+      "parent_id": 1,
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "embedding_shape": null,
+      "error": "AttributeError: combat",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_004.py",
+      "runtime_s": 1.409
+    },
+    {
+      "iteration": 5,
+      "candidate_id": 5,
+      "parent_id": 1,
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "embedding_shape": null,
+      "error": "ValueError: number sections must be larger than 0.",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3b_pbmc3k_era_smoke/candidates/cand_005.py",
+      "runtime_s": 1.382
+    }
+  ]
+}
