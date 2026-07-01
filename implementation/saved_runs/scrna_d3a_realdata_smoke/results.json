@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D3A real-data tiny smoke)",
+    "note": "Reduced Python-only proxy score; NOT the official scIB score. Real scIB (kBET/LISI/PCR/cell-cycle + R) deferred.",
+    "score_definition": "score = bio_score + batch_mixing_score (higher is better)",
+    "source": "scanpy_pbmc3k",
+    "data": "10x PBMC3k (scanpy)",
+    "batch_labels": "artificial (injected, n_batches=3, strength=0.8)",
+    "cell_type_labels": "proxy (Leiden res=1.0)",
+    "subsample": {
+      "n_cells": 500,
+      "n_genes": 2000,
+      "n_batches": 3,
+      "n_cell_types": 10,
+      "seed": 42
+    },
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4",
+      "anndata": "0.11.3",
+      "scanpy": "1.10.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "pca",
+      "valid": true,
+      "score": 1.027498096358162,
+      "bio_score": 0.5593490679633668,
+      "batch_mixing_score": 0.468149028394795,
+      "bio_silhouette": 0.11869813592673369,
+      "batch_silhouette": 0.06370194321040995,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": 0.13866857855943493,
+      "normalized_score": 0.513749048179081,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "runtime_s": 0.0432
+    },
+    {
+      "candidate": "batch_centered_pca",
+      "valid": true,
+      "score": 1.0700699165859162,
+      "bio_score": 0.56694901378968,
+      "batch_mixing_score": 0.5031209027962363,
+      "bio_silhouette": 0.13389802757936,
+      "batch_silhouette": -0.00624180559247271,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": 0.8474014231603181,
+      "normalized_score": 0.5350349582929581,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "runtime_s": 0.0527
+    }
+  ]
+}

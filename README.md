@@ -503,6 +503,13 @@ Kaggle dataset is not bundled, so the script fails gracefully with exact downloa
 instructions when the file is absent; the code path itself is verified on a structurally-identical
 synthetic `.h5ad`. Real `scib` scoring (with R/`kBET`) remains the deferred next step.
 
+Because the official Kaggle dataset is private and ~3 GB, `scrna_realdata_smoke.py` also offers a
+lightweight **public real-data** source (`--source scanpy_pbmc3k`): it pulls 10x PBMC3k (~5 MB via
+`scanpy`), uses Leiden clusters as a proxy `cell_type`, injects a controlled artificial batch effect,
+and runs the same candidate interface + reduced score. On 500 cells the batch-centered PCA again beats
+plain PCA — confirming a *real* AnnData flows cleanly through the ERA-style pipeline, as a bridge
+toward the full paper-scale scRNA benchmark.
+
 ---
 
 ## 9. How to Run

@@ -48,6 +48,13 @@
 > NOT present → the script exits with exact Kaggle download + placement instructions; the real code
 > path was validated on a fake structured h5ad. Details in **§14.10**.
 >
+> **D3A-alt DONE (2026-06-30) — Kaggle blocked → small PUBLIC real-data smoke instead.** The Kaggle
+> scRNA dataset is PRIVATE + ~3GB; even a valid classic token returns `403 datasets.get denied` via the
+> API (private dataset, not fetchable programmatically). Pivoted: `scrna_realdata_smoke.py` now has
+> `--source scanpy_pbmc3k` (10x PBMC3k, ~5.6 MB) with Leiden proxy `cell_type` + an injected artificial
+> batch. Works end-to-end: 500 cells × 2000 HVG, 3 batches, 10 clusters; `batch_centered_pca` 1.0701 >
+> `pca` 1.0275. Details in **§14.11**. (These D3A-alt changes are UNCOMMITTED — no push requested.)
+>
 > DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
 > files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
 > `README.md`). Existing per-stage READMEs (C1..C6A) may stay/ be edited but no NEW ones.
@@ -849,3 +856,32 @@ share an env. So:
 - **Recommendation for D3B:** do the **real 20k-cell REDUCED-score baseline FIRST** (cheap, no R —
   just scale the same reduced proxy up from 100 to 20k cells to confirm memory/runtime), and defer the
   full **R/kBET scIB** setup to a later stage once the reduced real-data path is solid.
+
+### 14.11 D3A-alt — Kaggle blocked; small public real-data smoke (PBMC3k) (DONE)
+- **Why:** the real Kaggle dataset (`vsubhashinigoog/single-cell-batch-integration`) is **private and
+  ~3GB**. Auth was fixed (a valid classic token from Kaggle "Create New Token" lists public datasets
+  fine, e.g. `uciml/iris`), but the target returns **`403 - Forbidden - Permission 'datasets.get'
+  denied`** on both `datasets files` and `datasets download` — it is a private dataset shared via a
+  hashed browser link, NOT downloadable via the API/CLI for this account. Manual 3GB browser download
+  was too slow, so we stopped blocking on it. (Kaggle creds live only in `~/.kaggle/kaggle.json`,
+  chmod 600, never committed; the throwaway CLI venv is in scratch.)
+- **New capability:** `implementation/scrna_realdata_smoke.py` extended with **`--source`**:
+  `scanpy_pbmc3k` (default) | `pbmc3k` (alias) | `local_h5ad` (the original Kaggle path, preserved for
+  when/if that file is present; still fails gracefully with instructions).
+- **`scanpy_pbmc3k` path:** downloads **10x PBMC3k** (~5.6 MB, cached in gitignored
+  `implementation/data/scanpy_cache/`), filters, picks 2000 HVGs, computes **Leiden clusters as a proxy
+  `cell_type`** on the CLEAN data (real biology), subsamples to `--n_cells`, then **injects a
+  controlled artificial batch** (`--n_batches` groups, per-(batch,gene) log-normal multiplicative
+  effect, `--batch_strength`). So biology is real-ish (PBMC structure) and the batch nuisance is
+  controlled — same `eliminate_batch_effect_fn` interface + same reduced score as D1/D2A.
+- **Result (verified):** 500 cells × 2000 HVG, 3 batches, 10 Leiden clusters; `pca` **1.0275**
+  (bio 0.559, batch_mix 0.468) < `batch_centered_pca` **1.0701** (bio 0.567, batch_mix 0.503); 2/2
+  valid. Smaller margin than synthetic (real clusters overlap), but the correction ordering holds.
+  (`bio_knn_accuracy` came back `None` — the hardened kNN cross-check correctly abstains when a Leiden
+  cluster is too small; the silhouette headline is unaffected.) Outputs:
+  `saved_runs/scrna_d3a_realdata_smoke/results.{json,csv}`.
+- **Command:** `cd /Users/zhangweikun/era/implementation && /Users/zhangweikun/era/scRNA-env/bin/python
+  -u scrna_realdata_smoke.py --source scanpy_pbmc3k --n_cells 500`.
+- **Still blocked by the Kaggle 3GB file:** the OFFICIAL paper dataset + the OFFICIAL 12-metric scIB
+  score (which also needs R/kBET). PBMC3k is a lightweight bridge, not the paper benchmark. Natural
+  next step: point `scrna_era_search.py` at a PBMC3k-backed scorer for a small REAL-data ERA smoke.

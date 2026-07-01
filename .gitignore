@@ -14,5 +14,8 @@ venv/
 # Isolated scRNA-seq env (separate venv; scanpy/anndata/scib, numpy<2)
 /scRNA-env/
 
+# scanpy dataset download cache (e.g. PBMC3k) — do not track downloaded data
+implementation/data/scanpy_cache/
+
 # OS
 .DS_Store
