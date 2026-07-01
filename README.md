@@ -528,6 +528,28 @@ reference, matching its score (≈ 1.070070) to full precision. Outputs in
 official 12-metric scIB); the official Kaggle dataset + scIB (with R/`kBET`) remain the deferred next
 step.
 
+**ERA vs best-of-N on PBMC3k (N=10 run — an effective tie).** The same fair-comparison harness used
+for GIFT-Eval is wired for this task: [`implementation/scrna_compare_era_vs_bon.py`](implementation/scrna_compare_era_vs_bon.py)
+runs ERA tree search and best-of-N independent sampling under an **equal budget** (N Gemini calls each),
+sharing the same model, `pbmc3k_conservative_v2` prompt, PCA-20 seed, scorer subprocess, and reduced
+reward — the only difference is that ERA conditions each candidate on a FUTS tree-selected parent
+(sequential feedback) while best-of-N always samples from the same fixed seed prompt. It reuses the
+D3B scorer bridge (never importing scanpy into the ERA env) and reports best reward, Δ-vs-seed, and
+valid/invalid counts per method.
+
+On the N=10 run (seed reward 1.027498), **both methods were 10/10 valid** and both reached the
+batch-centered reference: **ERA best-generated 1.0700699151** vs **best-of-N best-generated
+1.0700699166**. The script names best-of-N the winner, but only by ~1.4e-9 — an **effective tie**. Both
+best candidates are the *same* method (normalize-total → log1p → PCA(20) → per-batch mean-centering in
+the embedding space, i.e. the batch-centered-PCA reference); the microscopic gap is purely a
+`float32`-vs-`float64` rounding difference in the two candidates, not a methodological one, and 7 of 10
+best-of-N draws independently rediscovered that same correction. On this PBMC3k bridge the
+reduced-proxy optimum for simple heuristics *is* batch-centered PCA and it is trivially discoverable
+from the PCA seed, so — unlike GIFT-Eval `m4_hourly`, where the winning structure was deep — ERA's
+tree-search advantage does not manifest here; both methods reach the optimum reliably. Outputs in
+`saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/` (`results.json`, `summary.csv`, `progress_{era,bon}.csv`,
+`era_vs_bon_reward.png`).
+
 ---
 
 ## 9. How to Run

@@ -1,0 +1,4 @@
+method,n_generated,valid,invalid,best_reward_incl_seed,best_generated_reward_excl_seed,delta_vs_seed(pos=better),beat_seed,reached_reference_1.0701,n_unique_programs,n_duplicate_programs,n_unique_valid_reward
+seed_baseline,0,,,1.027498096358162,,0.0,,,,,
+ERA,10,10,0,1.070069915149361,1.070069915149361,0.04257181879119898,True,True,10,0,5
+best_of_N,10,10,0,1.0700699165859162,1.0700699165859162,0.0425718202277543,True,True,10,0,4

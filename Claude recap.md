@@ -78,6 +78,23 @@
 > rediscovered the reference correction on real PBMC3k biology. Committed + pushed to repro/main.
 > Details in **§14.14**.
 >
+> **D3C-alt DONE (2026-07-01) — PBMC3k ERA vs best-of-N N=10 run: EFFECTIVE TIE.** New
+> `implementation/scrna_compare_era_vs_bon.py` (ERA env) = the scRNA analogue of
+> `gift_eval_compare_era_vs_bon.py`. Both methods share model/prompt(pbmc3k_conservative_v2)/PCA-20
+> seed/scorer/reward and spend **N Gemini calls each** (total 2N); ONLY parent selection differs (ERA =
+> FUTS tree-selected parent w/ sequential feedback; best-of-N = always the same seed, independent). It
+> reuses D3B's `score_program`, prompt builder, seeds, and the scRNA-env scorer subprocess; NEVER
+> imports scanpy. Small backward-compat refactor: `scrna_era_search.score_program` got optional
+> `candidates_dir`/`logs_dir` (so ERA/BoN candidates land in separate folders) — D3B path unchanged.
+> Reward is HIGHER-is-better (reduced proxy), so best=MAX, delta_vs_seed POSITIVE=improvement (opposite
+> of GIFT-Eval's -MASE). **N=10 RESULT (seed 1.027498):** ERA best-gen **1.070069915149361** (10/0
+> valid, reached_ref), best-of-N best-gen **1.0700699165859162** (10/0 valid, reached_ref). Script
+> reports winner=best-of-N but by only **~1.4e-9** = an **EFFECTIVE TIE**: both rediscovered the SAME
+> batch-centered-PCA method (normalize_total→log1p→PCA20→per-batch mean-centering in embedding space);
+> the gap is purely **float32 (ERA best) vs float64 (BoN best)** rounding, not a real difference. 7/10
+> BoN candidates independently hit the ~1.07007 method. Committed + pushed to repro/main. Details in
+> **§14.15**.
+>
 > DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
 > files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
 > `README.md`). Existing per-stage READMEs (C1..C6A) may stay/ be edited but no NEW ones.
@@ -1001,3 +1018,78 @@ share an env. So:
   `scRNA-env`, gift-eval, Kaggle tokens, and `implementation/data/scanpy_cache/` stay gitignored/out.
 - **Still deferred (unchanged):** official Kaggle 3GB dataset + official 12-metric scIB (needs R/kBET);
   optional ERA-vs-best-of-N on pbmc3k.
+
+### 14.15 D3C-alt — PBMC3k ERA vs best-of-N compare (DONE; N=10 run) — EFFECTIVE TIE
+- **Goal:** the fair ERA-vs-best-of-N PROCESS comparison on the PBMC3k real-data bridge, same reduced
+  Python-only scorer, same two-env split. NO official Kaggle/HCA data, NO R/kBET, NO full scIB, NO 20k
+  cells, NO large downloads.
+- **New file:** `implementation/scrna_compare_era_vs_bon.py` (ERA env) — the scRNA analogue of
+  `gift_eval_compare_era_vs_bon.py`. Both methods share **model / prompt (pbmc3k_conservative_v2) /
+  PCA-20 seed / scorer / reward** and spend **N Gemini calls each** (total 2N). ONLY parent selection
+  differs:
+  * **ERA** (`run_era`) = `futs.search` with FUTS/PUCT tree-selected parents (SEQUENTIAL feedback —
+    each candidate can refine a previous one).
+  * **best-of-N** (`run_bon`) = N independent draws, ALWAYS from the same PCA-20 seed prompt (never
+    conditions on prior candidates).
+  The shared seed is scored ONCE and reused as the floor for both. Candidate interface unchanged:
+  `def eliminate_batch_effect_fn(adata, config): ... return adata` with `adata.obsm["X_emb"]`.
+- **Reuse / refactor:** imports D3B's `score_program`, `build_generation_prompt`, `PROMPT_VERSIONS`,
+  `default_prompt_version`, `PROBLEM_DESCRIPTION`, and the PCA-20 / batch-centered seeds from
+  `scrna_era_search`. Small **backward-compatible** refactor: `score_program` got optional
+  `candidates_dir` / `logs_dir` (default = the old hardcoded `<out_dir>/candidates` +
+  `candidate_logs/cand_NNN`), so ERA vs BoN candidates go to separate `era_candidates/` /
+  `bon_candidates/` folders. The D3B controller path is unchanged (defaults reproduce old behavior).
+- **Reward sign (opposite of GIFT-Eval):** reward = reduced score (bio + batch-mixing), **HIGHER is
+  better** → `best = MAX`, `best_so_far` is monotone INCREASING, `delta_vs_seed = best_gen - seed`
+  with **POSITIVE = improvement**, `beat_seed = best_gen > seed`, plus a `reached_reference` flag
+  (best_gen ≥ the batch-centered ref 1.070069915). Winner = higher best-generated reward (tie < 1e-9).
+- **Both use the SAME scorer subprocess:** `/Users/zhangweikun/era/scRNA-env/bin/python -u
+  scrna_realdata_task.py` with identical dataset params, so every candidate is scored on byte-identical
+  cached PBMC3k data.
+- **Non-Gemini validation (all PASS):** py_compile both; imports in ERA env with no scanpy/anndata
+  leak; reuses `score_program` from `scrna_era_search`; `--help` shows all flags. Full end-to-end run
+  with a FAKE LLM + FAKE scorer (scratch) exercised run_era/run_bon/method_stats/winner/CSV/JSON/plot:
+  4/1 valid/invalid each, higher-is-better math correct (best=max, delta positive, best_so_far
+  increasing), duplicate detection (1 dup), separate candidate folders, winner branch, all outputs
+  written. Live **two-env bridge** (real `scrna_realdata_task.py` via the new override path) reproduced
+  the PCA-20 seed reward **1.027498096358162** (bio 0.559, batch_mix 0.468) — no Gemini, used cache.
+- **Reference scores (this exact task):** PCA-20 seed **1.027498096358162**; batch-centered ref /
+  D3B-alt ERA best **1.070069915149361**. Success = ERA best-generated ≥ BoN best-generated (or
+  comparable); STRONG = either reaches ~1.0701; ALSO report valid/invalid for both.
+- **N=10 RESULT (user ran; command below).** Seed PCA reward **1.027498096358162**; both methods
+  10/10 valid, 0 invalid; both `reached_ref=True`:
+  - **ERA best-generated = 1.070069915149361** (delta_vs_seed +0.042572; best = `era_candidates/
+    cand_001.py`, found at iteration 1 off the seed). 6 distinct valid rewards; FUTS then explored a
+    ~1.0688 per-gene-centering variant (cand_004/005/007/008), re-derived exact 1.070070 at cand_006,
+    and tried n_comps=50 (cand_009 → 1.0412, lower); best held at cand_001.
+  - **best-of-N best-generated = 1.0700699165859162** (delta_vs_seed +0.042572; best = `bon_candidates/
+    cand_001.py`). **7 of 10** BoN draws independently hit the ~1.07007 batch-centered method; 5
+    distinct valid rewards.
+  - **Winner reported = best-of-N, but by only ~1.4e-9 → EFFECTIVE TIE / comparable, NOT a real BoN
+    win.** Both best candidates are the SAME method — normalize_total(1e4) → log1p → PCA(20,
+    random_state=0) → subtract each batch's centroid in the PC embedding space (batch-centered PCA,
+    the reference). The ONLY code difference: the ERA best casts `X` to **float32**
+    (`np.asarray(X, dtype=np.float32)`) → reward 1.070069915149361; the BoN best keeps **float64**
+    (`np.asarray(X)`) → reward 1.0700699165859162. So the 1.4e-9 gap is pure float32-vs-float64
+    rounding, not a methodological difference.
+- **Answers to the 3 postmortem asks:** (1) best ERA method = batch-centered PCA (float32 path);
+  (2) best BoN method = the identical batch-centered PCA (float64 path); (3) YES — both effectively
+  rediscovered batch-centering; the whole search collapsed onto normalize→log1p→PCA→per-batch
+  mean-centering in embedding space, matching the D3B-alt reference 1.070070.
+- **Interpretation:** on this PBMC3k bridge the reduced-proxy optimum for simple heuristics IS
+  batch-centered PCA (≈1.0701), and it is trivially discoverable from the PCA seed, so ERA's
+  tree-search advantage does not show (unlike GIFT-Eval m4_hourly where structure was deep). Both
+  methods reach it reliably with 0 invalid — a clean equal-budget tie, consistent with D3B-alt.
+- **Command the user ran** (2N = 20 Gemini calls; outputs in
+  `saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/`):
+  `cd /Users/zhangweikun/era/implementation && unset GOOGLE_API_KEY && export GEMINI_API_KEY="KEY" &&
+  export GEMINI_MODEL=gemini-2.5-flash && python scrna_compare_era_vs_bon.py --task pbmc3k --source
+  scanpy_pbmc3k --n_cells 500 --n_batches 3 --batch_strength 0.8 --N 10 --model gemini-2.5-flash
+  --prompt_version pbmc3k_conservative_v2 --initial_seed pca --out_dir
+  saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10`.
+- **Outputs (present):** `results.json`, `summary.csv`, `progress_era.csv`, `progress_bon.csv`,
+  `era_candidates/`, `bon_candidates/`, `candidate_logs/`, `era_vs_bon_reward.{png,pdf}`,
+  `initial_candidate.py`. (No single `best_candidate.py` — it is a two-method comparison; the best of
+  each method is in `summary.csv` / `results.json`.) Committed + pushed to repro/main (`scRNA-env`,
+  gift-eval, Kaggle tokens, `scanpy_cache`, `__pycache__`, `.h5ad` stay ignored/out).
+- **Still deferred (unchanged):** official Kaggle 3GB dataset + official 12-metric scIB (needs R/kBET).

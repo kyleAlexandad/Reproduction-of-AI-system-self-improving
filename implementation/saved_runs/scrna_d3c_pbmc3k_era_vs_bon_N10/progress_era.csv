@@ -1,0 +1,12 @@
+iteration,candidate_id,parent_id,valid,reward,score,bio_score,batch_mixing_score,embedding_shape,runtime_s,candidate_path,error
+0,0,,True,1.027498096358162,1.027498096358162,0.5593490679633668,0.468149028394795,"[500, 20]",2.016,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_000.py,
+1,1,0,True,1.070069915149361,1.070069915149361,0.5669490173459053,0.5031208978034556,"[500, 20]",1.559,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_001.py,
+2,2,1,True,1.0567848049104214,1.0567848049104214,0.5508187413215637,0.5059660635888577,"[500, 20]",2.191,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_002.py,
+3,3,1,True,1.0581527454778552,1.0581527454778552,0.5520458482205868,0.5061068972572684,"[500, 20]",1.424,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_003.py,
+4,4,1,True,1.0688207710627466,1.0688207710627466,0.5655191168189049,0.5033016542438418,"[500, 20]",1.384,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_004.py,
+5,5,1,True,1.0688207710627466,1.0688207710627466,0.5655191168189049,0.5033016542438418,"[500, 20]",1.95,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_005.py,
+6,6,5,True,1.070069915149361,1.070069915149361,0.5669490173459053,0.5031208978034556,"[500, 20]",1.338,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_006.py,
+7,7,6,True,1.0688207710627466,1.0688207710627466,0.5655191168189049,0.5033016542438418,"[500, 20]",1.347,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_007.py,
+8,8,6,True,1.0688207710627466,1.0688207710627466,0.5655191168189049,0.5033016542438418,"[500, 20]",1.359,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_008.py,
+9,9,6,True,1.041185216512531,1.041185216512531,0.536643486469984,0.504541730042547,"[500, 50]",1.352,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_009.py,
+10,10,6,True,1.0581527454778552,1.0581527454778552,0.5520458482205868,0.5061068972572684,"[500, 20]",2.105,/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/era_candidates/cand_010.py,

@@ -301,15 +301,21 @@ def score_program(
     scorer_script: str,
     timeout_s: int = 300,
     scorer_extra_args=None,
+    candidates_dir=None,
+    logs_dir=None,
 ) -> dict:
     """Write a candidate program to disk and score it via the scRNA env subprocess.
 
     Returns a dict with keys: valid, reward, score, bio_score, batch_mixing_score,
     embedding_shape, error, candidate_path, runtime_s. Never raises; any failure ->
     valid=False, reward=-inf.
+
+    `candidates_dir` / `logs_dir` override where the candidate .py and its scorer logs are
+    written (default: <out_dir>/candidates and <out_dir>/candidate_logs/cand_NNN). The compare
+    harness uses this to keep ERA and best-of-N candidates in separate folders.
     """
-    candidates_dir = out_dir / "candidates"
-    logs_dir = out_dir / "candidate_logs" / f"cand_{candidate_id:03d}"
+    candidates_dir = Path(candidates_dir) if candidates_dir is not None else (out_dir / "candidates")
+    logs_dir = Path(logs_dir) if logs_dir is not None else (out_dir / "candidate_logs" / f"cand_{candidate_id:03d}")
     candidates_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 

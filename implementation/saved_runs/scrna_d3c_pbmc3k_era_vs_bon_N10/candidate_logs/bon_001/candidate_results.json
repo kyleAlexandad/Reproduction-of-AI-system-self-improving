@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D3B-alt PBMC3k ERA-scorable scorer)",
+    "note": "Reduced Python-only proxy; NOT official scIB. Real biology (PBMC3k) + artificial batch; NO R/kBET, NO Kaggle HCA dataset.",
+    "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+    "dataset": {
+      "source": "scanpy_pbmc3k",
+      "n_cells": 500,
+      "n_genes": 2000,
+      "n_batches": 3,
+      "batch_strength": 0.8,
+      "n_hvg": 2000,
+      "leiden_resolution": 1.0,
+      "seed": 42
+    },
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "cand_001.py",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d3c_pbmc3k_era_vs_bon_N10/bon_candidates/cand_001.py",
+      "valid": true,
+      "reward": 1.0700699165859162,
+      "score": 1.0700699165859162,
+      "bio_score": 0.56694901378968,
+      "batch_mixing_score": 0.5031209027962363,
+      "bio_silhouette": 0.13389802757936,
+      "batch_silhouette": -0.00624180559247271,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": 0.8474014231603181,
+      "embedding_shape": [
+        500,
+        20
+      ],
+      "error": null,
+      "runtime_s": 0.0793
+    }
+  ]
+}
