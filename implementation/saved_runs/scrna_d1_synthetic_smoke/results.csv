@@ -1,0 +1,5 @@
+candidate,valid,score,normalized_score,bio_score,batch_mixing_score,bio_silhouette,batch_silhouette,bio_knn_accuracy,batch_knn_mixing,embedding_shape,error,runtime_s
+pca,True,1.066090241074562,0.533045120537281,0.7050909996032715,0.3609992414712906,0.41018199920654297,0.2780015170574188,1.0,0.0,"[300, 20]",,0.0848
+batch_centered_pca,True,1.302372277714312,0.651186138857156,0.8082050681114197,0.4941672096028924,0.6164101362228394,0.011665580794215202,1.0,0.0435161979021631,"[300, 20]",,0.016
+invalid_missing_x_emb,False,,,,,,,,,,ValueError: output.obsm is missing required key 'X_emb',0.0008
+invalid_wrong_shape,False,,,,,,,,,,"ValueError: Value passed for key 'X_emb' is of incorrect shape. Values of obsm must match dimensions ('obs',) of parent. Value had shape (10,) while it should have had (300,).",0.0028

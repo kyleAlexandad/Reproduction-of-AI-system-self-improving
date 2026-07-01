@@ -11,5 +11,8 @@ venv/
 # Third-party: official GIFT-Eval clone (separate repo + venv + downloaded data)
 /gift-eval/
 
+# Isolated scRNA-seq env (separate venv; scanpy/anndata/scib, numpy<2)
+/scRNA-env/
+
 # OS
 .DS_Store

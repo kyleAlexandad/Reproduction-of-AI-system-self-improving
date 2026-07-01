@@ -1,0 +1,7 @@
+valid=True score=1.186700 reward=1.186700 bio=0.6859 batch_mix=0.5008 emb=[300, 99] [cand_003.py]
+
+--- STDERR ---
+/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_highly_variable_genes.py:75: UserWarning: `flavor='seurat_v3'` expects raw count data, but non-integers were found.
+  warnings.warn(
+/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_simple.py:672: UserWarning: Received a view of an AnnData. Making a copy.
+  view_to_actual(adata)

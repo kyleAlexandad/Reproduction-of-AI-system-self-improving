@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D1 synthetic smoke test)",
+    "note": "Reduced Python-only proxy score; NOT the official 12-metric scIB score. Real scIB scoring (kBET/LISI/PCR/cell-cycle/... + R) is deferred to D2.",
+    "score_definition": "score = bio_score + batch_mixing_score  (higher is better)",
+    "bio_score": "(silhouette(cell_type)+1)/2, higher = cell types preserved",
+    "batch_mixing_score": "1-(silhouette(batch)+1)/2, higher = batches well mixed",
+    "dataset": {
+      "n_cells": 300,
+      "n_genes": 100,
+      "n_batches": 3,
+      "n_cell_types": 3,
+      "batch_strength": 1.2,
+      "celltype_strength": 1.6,
+      "seed": 42
+    },
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4",
+      "anndata": "0.11.3",
+      "scanpy": "1.10.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "pca",
+      "valid": true,
+      "score": 1.066090241074562,
+      "bio_score": 0.7050909996032715,
+      "batch_mixing_score": 0.3609992414712906,
+      "bio_silhouette": 0.41018199920654297,
+      "batch_silhouette": 0.2780015170574188,
+      "bio_knn_accuracy": 1.0,
+      "batch_knn_mixing": 0.0,
+      "normalized_score": 0.533045120537281,
+      "embedding_shape": [
+        300,
+        20
+      ],
+      "error": null,
+      "runtime_s": 0.0848
+    },
+    {
+      "candidate": "batch_centered_pca",
+      "valid": true,
+      "score": 1.302372277714312,
+      "bio_score": 0.8082050681114197,
+      "batch_mixing_score": 0.4941672096028924,
+      "bio_silhouette": 0.6164101362228394,
+      "batch_silhouette": 0.011665580794215202,
+      "bio_knn_accuracy": 1.0,
+      "batch_knn_mixing": 0.0435161979021631,
+      "normalized_score": 0.651186138857156,
+      "embedding_shape": [
+        300,
+        20
+      ],
+      "error": null,
+      "runtime_s": 0.016
+    },
+    {
+      "candidate": "invalid_missing_x_emb",
+      "valid": false,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "bio_silhouette": null,
+      "batch_silhouette": null,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": null,
+      "normalized_score": null,
+      "embedding_shape": null,
+      "error": "ValueError: output.obsm is missing required key 'X_emb'",
+      "runtime_s": 0.0008,
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/zhangweikun/era/implementation/scrna_synthetic_smoke.py\", line 319, in run_candidate\n    raise ValueError(err)\nValueError: output.obsm is missing required key 'X_emb'\n"
+    },
+    {
+      "candidate": "invalid_wrong_shape",
+      "valid": false,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "bio_silhouette": null,
+      "batch_silhouette": null,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": null,
+      "normalized_score": null,
+      "embedding_shape": null,
+      "error": "ValueError: Value passed for key 'X_emb' is of incorrect shape. Values of obsm must match dimensions ('obs',) of parent. Value had shape (10,) while it should have had (300,).",
+      "runtime_s": 0.0028,
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/zhangweikun/era/implementation/scrna_synthetic_smoke.py\", line 315, in run_candidate\n    out = fn(model_input, config)\n          ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/implementation/scrna_synthetic_smoke.py\", line 167, in candidate_invalid_shape\n    return ad.AnnData(obs=adata.obs.copy(), var=adata.var.copy(), obsm={\"X_emb\": bad})\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/anndata.py\", line 252, in __init__\n    self._init_as_actual(\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/anndata.py\", line 442, in _init_as_actual\n    self.obsm = obsm\n    ^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 435, in __set__\n    _ = self.construct(obj, store=value)  # Validate\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 408, in construct\n    return self.cls(obj, axis=self.axis, store=store)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 297, in __init__\n    super().__init__(parent, store=store)\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 210, in __init__\n    self._data[k] = self._validate_value(v, k)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 279, in _validate_value\n    return super()._validate_value(val, key)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/anndata/_core/aligned_mapping.py\", line 97, in _validate_value\n    raise ValueError(msg)\nValueError: Value passed for key 'X_emb' is of incorrect shape. Values of obsm must match dimensions ('obs',) of parent. Value had shape (10,) while it should have had (300,).\n"
+    }
+  ]
+}

@@ -469,6 +469,40 @@ Instead, it is a **mechanistic reproduction and extension** showing:
 - **No scRNA / COVID / geospatial / ZAPBench** reproduction yet.
 - The **API budget was small** (results are consistent, not tight statistical claims).
 
+### Next planned stage — scRNA-seq batch integration
+
+The next large stage targets the upstream ERA **single-cell RNA-seq batch integration** task, whose
+official notebook already ships in this repo at
+[`implementation/notebooks/single_cell_batch_integration.ipynb`](implementation/notebooks/single_cell_batch_integration.ipynb).
+The candidate interface is `eliminate_batch_effect_fn(adata, config)` returning a batch-corrected
+embedding in `obsm['X_emb']` (raw counts in, 2000 highly-variable genes, must not use `cell_type`),
+scored by the **mean of 12 `scib` integration metrics** (higher is better) on a **20,000-cell
+subsample**. It requires its **own isolated environment** (`scanpy`/`anndata`/`scib` + R/`kBET`,
+numpy < 2) — separate from both the ERA and GIFT-Eval environments. Reconnaissance/planning is
+complete. A first setup + **synthetic Python-only smoke test** is also done: an isolated env
+(`scRNA-env`, Python 3.11 with `scanpy`/`anndata`/`scib`) plus
+[`implementation/scrna_synthetic_smoke.py`](implementation/scrna_synthetic_smoke.py), which builds a
+synthetic 300-cell / 3-batch / 3-cell-type AnnData, runs candidates through the
+`eliminate_batch_effect_fn` interface, scores them with a lightweight batch-mixing + biology-preservation
+proxy (a batch-corrected PCA beats raw PCA; invalid candidates are caught), and writes
+`saved_runs/scrna_d1_synthetic_smoke/results.{json,csv}`. This is **not** the official scIB metric —
+real scIB scoring (with R/`kBET`) and the real dataset are the next step.
+
+On top of that, the same **two-environment ERA architecture** used for GIFT-Eval is now wired for the
+synthetic scRNA task: `implementation/scrna_synthetic_task.py` is an ERA-scorable scorer (runs in
+`scRNA-env`; reward = the reduced score, higher is better), and `implementation/scrna_era_search.py`
+is the ERA/FUTS + Gemini controller (runs in the ERA env, scores each candidate by subprocess into
+`scRNA-env`). The controller starts from a PCA baseline and asks the LLM to improve
+`eliminate_batch_effect_fn`. The subprocess bridge and invalid-candidate handling are validated
+without Gemini; the small ERA run itself is launched manually with a `GEMINI_API_KEY`.
+
+The **real-data path** is also wired: `implementation/scrna_realdata_smoke.py` loads the real
+GIFT-style `*-train-dataset.h5ad` (raw counts in `layers/counts`, `obs['batch']` + `obs['cell_type']`),
+subsamples to a tiny cell count, and runs the same candidate interface + reduced proxy score. The real
+Kaggle dataset is not bundled, so the script fails gracefully with exact download-and-placement
+instructions when the file is absent; the code path itself is verified on a structurally-identical
+synthetic `.h5ad`. Real `scib` scoring (with R/`kBET`) remains the deferred next step.
+
 ---
 
 ## 9. How to Run

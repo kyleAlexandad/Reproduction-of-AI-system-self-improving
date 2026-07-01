@@ -1,0 +1,203 @@
+{
+  "task": "scRNA synthetic batch integration (D2A ERA smoke test)",
+  "model": "gemini-2.5-flash",
+  "initial_candidate": "pca_baseline (built-in)",
+  "iterations_requested": 10,
+  "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+  "note": "Synthetic smoke test; NOT the official scIB score. Real data/scIB deferred to D2B.",
+  "aborted": false,
+  "initial_reward": 1.0699458867311478,
+  "best_reward": 1.2525294265942648,
+  "best_score": 1.2525294265942648,
+  "best_candidate_id": 1,
+  "num_candidates_total": 11,
+  "num_valid": 10,
+  "num_invalid": 1,
+  "improvement_over_initial": 0.18258353986311704,
+  "records": [
+    {
+      "iteration": 0,
+      "candidate_id": 0,
+      "parent_id": null,
+      "valid": true,
+      "reward": 1.0699458867311478,
+      "score": 1.0699458867311478,
+      "bio_score": 0.7258429974317551,
+      "batch_mixing_score": 0.3441028892993927,
+      "embedding_shape": [
+        300,
+        10
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_000.py",
+      "runtime_s": 1.947
+    },
+    {
+      "iteration": 1,
+      "candidate_id": 1,
+      "parent_id": 0,
+      "valid": true,
+      "reward": 1.2525294265942648,
+      "score": 1.2525294265942648,
+      "bio_score": 0.7539181113243103,
+      "batch_mixing_score": 0.4986113152699545,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_001.py",
+      "runtime_s": 1.85
+    },
+    {
+      "iteration": 2,
+      "candidate_id": 2,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.2516396644059569,
+      "score": 1.2516396644059569,
+      "bio_score": 0.75300332903862,
+      "batch_mixing_score": 0.49863633536733687,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_002.py",
+      "runtime_s": 2.48
+    },
+    {
+      "iteration": 3,
+      "candidate_id": 3,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.1867000115192998,
+      "score": 1.1867000115192998,
+      "bio_score": 0.685936318363574,
+      "batch_mixing_score": 0.5007636931557259,
+      "embedding_shape": [
+        300,
+        99
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_003.py",
+      "runtime_s": 19.782
+    },
+    {
+      "iteration": 4,
+      "candidate_id": 4,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.2050887814111775,
+      "score": 1.2050887814111775,
+      "bio_score": 0.7049122452735901,
+      "batch_mixing_score": 0.5001765361375874,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_004.py",
+      "runtime_s": 1.856
+    },
+    {
+      "iteration": 5,
+      "candidate_id": 5,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.1177138946950436,
+      "score": 1.1177138946950436,
+      "bio_score": 0.6202195957303047,
+      "batch_mixing_score": 0.49749429896473885,
+      "embedding_shape": [
+        300,
+        8
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_005.py",
+      "runtime_s": 2.224
+    },
+    {
+      "iteration": 6,
+      "candidate_id": 6,
+      "parent_id": 2,
+      "valid": true,
+      "reward": 1.2525294182123616,
+      "score": 1.2525294182123616,
+      "bio_score": 0.7539181113243103,
+      "batch_mixing_score": 0.49861130688805133,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_006.py",
+      "runtime_s": 2.007
+    },
+    {
+      "iteration": 7,
+      "candidate_id": 7,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.2286053449424799,
+      "score": 1.2286053449424799,
+      "bio_score": 0.7286671996116638,
+      "batch_mixing_score": 0.49993814533081604,
+      "embedding_shape": [
+        300,
+        99
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_007.py",
+      "runtime_s": 1.382
+    },
+    {
+      "iteration": 8,
+      "candidate_id": 8,
+      "parent_id": 1,
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "embedding_shape": null,
+      "error": "ValueError: output array is read-only",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_008.py",
+      "runtime_s": 1.26
+    },
+    {
+      "iteration": 9,
+      "candidate_id": 9,
+      "parent_id": 6,
+      "valid": true,
+      "reward": 1.2105180354405143,
+      "score": 1.2105180354405143,
+      "bio_score": 0.7085677730423092,
+      "batch_mixing_score": 0.5019502623982051,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_009.py",
+      "runtime_s": 1.447
+    },
+    {
+      "iteration": 10,
+      "candidate_id": 10,
+      "parent_id": 1,
+      "valid": true,
+      "reward": 1.205088677466847,
+      "score": 1.205088677466847,
+      "bio_score": 0.7049121409654617,
+      "batch_mixing_score": 0.5001765365013853,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_010.py",
+      "runtime_s": 1.681
+    }
+  ]
+}

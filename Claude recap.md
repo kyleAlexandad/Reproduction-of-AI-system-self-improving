@@ -19,6 +19,34 @@
 > ERA-only, even beating the seasonal-naive reference 1.1932); and ERA **beat best-of-N**
 > (1.1932 vs 1.3651) under equal budget. So ERA's tree-search advantage now holds on a real
 > benchmark AND clears the naive baseline (unlike m4_weekly where naive was unbeatable).
+> **C6B N=20 numbers confirmed present** in both this recap (§13.9) and root README (§C5–C6):
+> seed naive 11.6077, ERA best-gen 1.1932, BoN best-gen 1.3651, 20/0 both, winner ERA.
+>
+> **D0 DONE (2026-06-30) — next-stage RECON only (no Gemini/ERA/BoN/downloads):** scRNA-seq batch
+> integration. The upstream ERA task already lives locally at
+> `implementation/notebooks/single_cell_batch_integration.ipynb` (this repo root IS the
+> `google-research/era` clone; `origin=google-research/era.git`). It needs a SEPARATE isolated env
+> (`scanpy`/`anndata`/`scib` + R/`kBET`, numpy<2) — incompatible with BOTH the ERA env (numpy 2.5)
+> and the gift-eval venv. Full findings + D1 plan in **§14**.
+>
+> **D1 DONE (2026-06-30) — scRNA-env built + synthetic Python-only smoke test PASSES (no download,
+> no R, no Gemini).** New env `/Users/zhangweikun/era/scRNA-env` (Python 3.11.15; numpy 1.26.4,
+> anndata 0.11.3, scanpy 1.10.4, scib 1.1.7). New script `implementation/scrna_synthetic_smoke.py`
+> validates the full plumbing on synthetic data. Details in **§14.8**.
+>
+> **D2A DONE (2026-06-30) — synthetic scRNA ERA-scorable wrapper + controller (code-ready; Gemini NOT
+> run yet).** GIFT-Eval-style two-env split: `implementation/scrna_synthetic_task.py` (scorer, runs in
+> scRNA-env; reward = reduced score, higher better) + `implementation/scrna_era_search.py` (ERA-env
+> FUTS/Gemini controller, scores via subprocess into scRNA-env). Non-Gemini bridge validated; user
+> runs the 5-iter Gemini smoke manually. `/scRNA-env/` added to `.gitignore`. Details in **§14.9**.
+> **D2A Gemini runs (user):** 5-iter PCA 1.0699→**1.2793**; 10-iter 1.0699→1.2525 (valid/invalid 10/1)
+> — the synthetic LLM→scorer→FUTS loop works.
+>
+> **D3A DONE (2026-06-30) — REAL scRNA data path + tiny real-data smoke (no download/R/scIB/Gemini).**
+> New `implementation/scrna_realdata_smoke.py` loads the real `*-train-dataset.h5ad` (counts in
+> `layers/counts`), subsamples to ~100 cells, runs the D1/D2A candidates + reduced score. Real data is
+> NOT present → the script exits with exact Kaggle download + placement instructions; the real code
+> path was validated on a fake structured h5ad. Details in **§14.10**.
 >
 > DOCS POLICY (user instruction, 2026-06-30): going forward do NOT create new per-stage markdown
 > files. Only maintain (1) this `Claude recap.md` and (2) ONE overall/final report md (the root
@@ -657,3 +685,167 @@ share an env. So:
 - To score any candidate by hand (no Gemini):
   `/Users/zhangweikun/era/gift-eval/.venv/bin/python -u gift_eval_m4_weekly_task.py --candidates <f.py> --out-dir /tmp/x`.
 - MASE/CRPS/etc. are all **lower-is-better**; ERA reward negates (`-MASE`).
+
+---
+
+## 14. Stage D0 — scRNA-seq batch integration reconnaissance (DONE; planning only)
+
+> D0 = recon/planning ONLY. No Gemini, no ERA, no best-of-N, no dataset download, no new md files.
+> Full narrative report was delivered in chat; this is the durable summary.
+
+### 14.1 What exists locally
+- **This repo root IS the official `google-research/era` clone** (`origin=google-research/era.git`),
+  so all upstream task assets are already here.
+- **The scRNA task notebook already exists:** `implementation/notebooks/single_cell_batch_integration.ipynb`
+  (27 cells) — a complete ERA task with Overview, Input/Output format, `score()`, Begin/End mutable
+  cells, and Validation. Sibling upstream task: `implementation/notebooks/flu-cornell-jhu-hierarchsir.ipynb`
+  (a much LIGHTER pure-python probabilistic-forecast task, WIS metric, `pip install emcee pybind11 scipy`).
+- **No scRNA data is downloaded** (no `.h5ad` present); no scRNA Python code beyond the notebook.
+
+### 14.2 Task interface (what ERA would generate)
+- Implement `eliminate_batch_effect_fn(adata: ad.AnnData, config: dict) -> ad.AnnData`, returning an
+  AnnData whose batch-corrected embedding is stored in `obsm['X_emb']`.
+- Input = **raw count** AnnData already subset to **2000 highly-variable genes**; batch in
+  `obs['batch']`. Constraint: **MUST NOT use `cell_type`**; "minimize specialized single-cell
+  packages" — only `scanpy` is allowed, otherwise native `sklearn/numpy/scipy/torch/jax/tf`.
+- Expert hint baked into the prompt: a conditional VAE with adversarial (gradient-reversal) batch
+  removal.
+
+### 14.3 Reward / metric (opposite sign to GIFT-Eval)
+- `score()` returns the **mean of 12 `scib` metrics**, each scaled to [0,1] via provided bounds then
+  clipped: ASW-batch, ASW-label, ARI, NMI, graph-connectivity, isolated-label ASW, isolated-label F1,
+  kBET, iLISI, cLISI, PCR, cell-cycle-conservation. **HIGHER is better** → ERA reward = score directly
+  (no negation, unlike GIFT-Eval's `-MASE`). Reference: gemini-3-pro ERA best ≈ **0.677** in the
+  notebook's own results table.
+
+### 14.4 Dataset + small setting
+- Data = Kaggle "single-cell-batch-integration" h5ad files expected under
+  `./datasets/single-cell-batch-integration/` (train/val/solution + score bounds CSVs). Large (a
+  typical matrix is 329,762 cells × 2000 genes).
+- **The notebook itself subsamples to 20,000 cells (`target_size=20000, seed=42`)** — this IS the
+  "20k-cell" toy setting. There is also a 100-cell dev smoke test (cell 17, TruncatedSVD).
+
+### 14.5 Dependencies + conflicts → SEPARATE env
+- Pinned (older): `anndata==0.11.3`, `scanpy==1.10.4`, `scib==1.1.7` (installed from git),
+  `anndata2ri==1.3.2`, `rpy2`; plus **R** with `remotes` + **`kBET`** (GitHub). `torch/jax/tensorflow`
+  are imported in the mutable cell (likely trimmable).
+- **Hard conflict** with the ERA env (numpy **2.5.0**, no R) and with the gift-eval venv (numpy 1.26
+  but different pins). scib 1.1.7 wants numpy<2. **R/Rscript are NOT installed on this machine.**
+- **Decision: create a THIRD isolated env** `/Users/zhangweikun/era/scRNA-env` (recommend Python
+  3.11). Never touch the ERA brew Python or the gift-eval venv. Add `/scRNA-env/` + `datasets/` to
+  `.gitignore`.
+
+### 14.6 Cost + risks (heavier than GIFT-Eval)
+- Per-candidate scoring on 20k cells = kNN + 7× Leiden + optimal-resolution search + 12 metrics
+  (kBET/LISI are slow) → **minutes per candidate**, and a VAE candidate also trains a torch model.
+  So an ERA run here is far more expensive than a GIFT-Eval run (which scored in seconds).
+- Top risks: (1) **R + rpy2 + kBET + anndata2ri** install on macOS arm64 (kBET is the only R-only
+  metric); (2) old `scib 1.1.7` vs modern Python/numpy; (3) slow/memory-heavy scoring; (4) candidate
+  torch/jax training time; (5) insecure sandbox executing LLM code; (6) Kaggle auth + large download.
+
+### 14.7 Proposed D1 (de-risked, phased)
+1. Create `scRNA-env` (Python 3.11) and install `anndata scanpy scib anndata2ri rpy2` (defer R).
+2. Smoke-test the **candidate interface + a REDUCED python-only `score`** (drop kBET/R, and LISI if it
+   won't build) on a **tiny SYNTHETIC AnnData** (random counts + fake batch/cell_type) — **no
+   download**. Validates env + `X_emb` contract + a trivial baseline (e.g. normalize→log1p→PCA).
+3. D2 (later, separate approval): install R+kBET, download the real subsampled Kaggle dataset, run the
+   full 12-metric `score` on the 20k-cell subsample; then wire ERA + a scRNA-scorer subprocess bridge
+   analogous to the GIFT-Eval two-env pattern.
+- **Recommendation:** scRNA is the highest paper-fidelity next stage and worth doing via this phased
+  de-risk; if R/kBET proves too painful, the **flu forecasting** notebook is a lighter upstream
+  fallback (no R, pure pandas/numpy, and it also has published ERA-vs-BoN numbers).
+
+### 14.8 D1 — scRNA-env + synthetic Python-only smoke test (DONE)
+- **Env created:** `/Users/zhangweikun/era/scRNA-env` (Homebrew **Python 3.11.15** venv; installed
+  `numpy 1.26.4` (<2), `anndata 0.11.3`, `scanpy 1.10.4`, `scib 1.1.7` + deps). Deferred R/kBET/
+  anndata2ri/rpy2. This is the THIRD isolated env (never mix with ERA brew Python or gift-eval venv).
+  Note: on this machine `brew` must be the arm64 one — use `/opt/homebrew/bin/brew` (the `/usr/local`
+  Intel brew is broken: "Bad CPU type").
+- **New script:** `implementation/scrna_synthetic_smoke.py` (run with the scRNA-env python). Fully
+  synthetic — NO download, NO R, NO Gemini/ERA/BoN. Builds a 300-cell × 100-gene AnnData with 3
+  batches + 3 cell types (cell-type signal AND batch effect injected via Poisson log-rates), runs 4
+  candidates through the upstream interface `eliminate_batch_effect_fn(adata, config) -> obsm['X_emb']`
+  (the harness pops `cell_type` before calling so candidates can't use it), scores each with a REDUCED
+  Python-only proxy, and writes JSON+CSV. No markdown.
+- **Reduced proxy (NOT scIB):** `score = bio_score + batch_mixing_score` (higher better), where
+  `bio_score=(silhouette(cell_type)+1)/2` and `batch_mixing_score=1-(silhouette(batch)+1)/2`, plus kNN
+  cross-checks (cell-type accuracy; batch balanced-accuracy-above-chance inverted). Clearly documented
+  as a D1 smoke-test metric only; the official 12-metric scIB score (kBET/LISI/PCR/cell-cycle + R) is
+  deferred to D2.
+- **Result (verified by running it):** `batch_centered_pca` **1.3024** (bio 0.808, batch_mix 0.494)
+  > raw `pca` **1.0661** (bio 0.705, batch_mix 0.361) — the batch correction correctly scores higher;
+  both `invalid_missing_x_emb` and `invalid_wrong_shape` were correctly flagged `valid=False` with
+  clear errors. **2/4 valid, 2/4 correctly-invalid.** Outputs:
+  `saved_runs/scrna_d1_synthetic_smoke/results.{json,csv}`.
+- **Command:** `cd /Users/zhangweikun/era/implementation && /Users/zhangweikun/era/scRNA-env/bin/python
+  -u scrna_synthetic_smoke.py`.
+- `/scRNA-env/` is now in the root `.gitignore` (added in D2A, like `/gift-eval/`).
+
+### 14.9 D2A — synthetic ERA-scorable wrapper + tiny ERA controller (DONE; code-ready, Gemini NOT run)
+- **Goal:** turn the D1 synthetic smoke test into the GIFT-Eval-style TWO-ENV pattern — an ERA-env
+  controller that drives FUTS + Gemini, scoring each candidate by subprocess into the scRNA-env. Still
+  SYNTHETIC ONLY (no real data, no R/kBET, no best-of-N, no large run).
+- **New files:**
+  - `implementation/scrna_synthetic_task.py` — the **scorer** (runs in scRNA-env). CLI
+    `--candidate <f.py> [--candidate ...] --out-dir <dir>`. Reuses D1's deterministic
+    `make_synthetic_adata` + `reduced_score` + `validate_output` (imported from
+    `scrna_synthetic_smoke`). Loads `eliminate_batch_effect_fn`, pops `cell_type` before calling
+    (candidate can't use it), validates `obsm['X_emb']`, scores. Writes `candidate_results.json`
+    (`{meta, results:[...]}`, mirroring the GIFT-Eval scorer) + a parseable stdout line.
+    **reward = reduced score (HIGHER better — NO negation, unlike GIFT-Eval's -MASE).**
+  - `implementation/scrna_era_search.py` — the **ERA controller** (runs in ERA env; imports only
+    `futs` + `llm`, NEVER scanpy/anndata). Seed = built-in log-norm **PCA baseline** (`PCA_SEED_CODE`).
+    `score_program()` subprocesses `<scRNA-env python> -u scrna_synthetic_task.py --candidate ...
+    --out-dir ...`, parses JSON (stdout-regex fallback), maps invalid→reward -inf. Runs real
+    `futs.search`. Saves `results.json`, `progress.csv`, `best_candidate.py`, `initial_candidate.py`,
+    `candidates/`, `candidate_logs/` under `saved_runs/scrna_d2a_synthetic_era_smoke/`. Prompt states
+    all 10 rules (define `eliminate_batch_effect_fn`, set `X_emb`, don't use `cell_type`, may use
+    `batch`, finite (n_cells,d), lightweight/no-NN, no downloads, numpy/scipy/scanpy/sklearn only).
+- **Non-Gemini validation (all PASS):** py_compile both; controller imports in ERA env with no scanpy
+  leak; scorer on 3 hand candidates in scRNA-env → `pca` 1.0699 (bio .726, batch_mix .344) <
+  `batch_centered_pca` 1.3408 (bio .853, batch_mix .488), `invalid_missing_x_emb`→valid=False; and the
+  **full bridge** (ERA-env `score_program` → scRNA-env subprocess) scored the PCA seed (reward 1.0699)
+  and mapped a crashing candidate to reward -inf. (n_comps=10 here vs 20 in D1 → slightly different
+  absolute numbers, same ordering.)
+- **User runs the 5-iter Gemini smoke manually** (do NOT run it here):
+  `cd /Users/zhangweikun/era/implementation && unset GOOGLE_API_KEY && export GEMINI_API_KEY="KEY" &&
+  export GEMINI_MODEL=gemini-2.5-flash && python scrna_era_search.py --iterations 5 --model
+  gemini-2.5-flash --out_dir saved_runs/scrna_d2a_synthetic_era_smoke`.
+- **D2B (next, needs separate go-ahead):** real subsampled Kaggle data + real scIB score (add R/kBET
+  incrementally), plus optional ERA-vs-best-of-N on the synthetic task.
+
+### 14.10 D3A — real scRNA data path + tiny real-data smoke (DONE; data not downloaded)
+- **Goal:** stand up the REAL-data path and smoke it on a tiny subset — no download, no R/kBET, no
+  official scIB, no Gemini/ERA/BoN.
+- **Notebook expectations (confirmed from `single_cell_batch_integration.ipynb`):** data dir
+  `./datasets/single-cell-batch-integration/` relative to the notebook (=
+  `implementation/notebooks/datasets/single-cell-batch-integration/`). Reduced smoke needs only the
+  **`ffdaa1f0-b1d1-4135-8774-9fed7bf039ba-train-dataset.h5ad`** (raw counts in **`layers/counts`**,
+  `obs['batch']` + `obs['cell_type']`). The `*-train-solution.h5ad` (normalized, in `layers/normalized`)
+  + `score_{train,val}.median.bounds.csv` are only for the FULL scIB score (later). Notebook subsample
+  = `subsample_adata(target_size=20000, seed=42)` (stratified by batch×cell_type); its dev test uses a
+  RANDOM 100-cell subset (cell 17).
+- **New file:** `implementation/scrna_realdata_smoke.py` (scRNA env). Locates the train `.h5ad`
+  (searches `notebooks/datasets/...`, `implementation/datasets/...`, `./datasets/...`; `--data_file`
+  override), loads it (prefers `layers['counts']`), RANDOM-subsamples to `--n_cells` (default 100),
+  runs `candidate_pca` + `candidate_batch_centered_pca` via the reused D1 `run_candidate` harness,
+  computes the reduced proxy score, writes `saved_runs/scrna_d3a_realdata_smoke/results.{json,csv}`.
+  `--batch_key/--label_key` map alternate obs fields. If data is missing it exits(2) with a clear
+  message: which file, where to place it, and the Kaggle download command.
+- **`reduced_score` hardened** (in `scrna_synthetic_smoke.py`): the secondary kNN cross-check now uses
+  adaptive CV and returns `None` if a class is too small for a tiny real subset (silhouette headline
+  unchanged). Backward-compatible — D1 synthetic re-run is byte-identical (pca 1.0661, batch_centered
+  1.3024).
+- **Real dataset is NOT present** locally → running the smoke prints the download instructions and
+  exits. The REAL code path (load `layers/counts` → subsample 100 → candidates → score) was validated
+  on a FAKE h5ad built with the real structure: loaded 1500×200, subsampled 100 (4 batches, 5 types),
+  `pca` 1.0961 < `batch_centered_pca` 1.3465, 2/2 valid. (Note: writing a synthetic h5ad under pandas
+  3.0 needs `ad.settings.allow_write_nullable_strings=True`; this only affects *generating* test files,
+  not reading the real one.)
+- **Commands:** tiny smoke — `cd /Users/zhangweikun/era/implementation && /Users/zhangweikun/era/
+  scRNA-env/bin/python -u scrna_realdata_smoke.py --n_cells 100`. Download (Kaggle "Single-Cell
+  Biology", needs a Kaggle token): only the `*-train-dataset.h5ad` is required for this smoke; place it
+  in `implementation/notebooks/datasets/single-cell-batch-integration/`.
+- **Recommendation for D3B:** do the **real 20k-cell REDUCED-score baseline FIRST** (cheap, no R —
+  just scale the same reduced proxy up from 100 to 20k cells to confirm memory/runtime), and defer the
+  full **R/kBET scIB** setup to a later stage once the reduced real-data path is solid.

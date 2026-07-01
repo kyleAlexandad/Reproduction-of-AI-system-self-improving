@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D2A synthetic ERA-scorable scorer)",
+    "note": "Reduced Python-only proxy; NOT the official scIB score. Real scIB (kBET/LISI/PCR/cell-cycle + R) and real data are deferred to D2B.",
+    "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "cand_008.py",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_008.py",
+      "valid": false,
+      "reward": null,
+      "score": null,
+      "bio_score": null,
+      "batch_mixing_score": null,
+      "bio_silhouette": null,
+      "batch_silhouette": null,
+      "bio_knn_accuracy": null,
+      "batch_knn_mixing": null,
+      "embedding_shape": null,
+      "error": "ValueError: output array is read-only",
+      "runtime_s": 0.0257,
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/zhangweikun/era/implementation/scrna_synthetic_task.py\", line 96, in evaluate_candidate\n    out = fn(model_input, config)\n          ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_008.py\", line 67, in eliminate_batch_effect_fn\n    sc.pp.scale(adata_hvg, max_value=10)\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/_utils/__init__.py\", line 165, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/legacy_api_wrap/__init__.py\", line 88, in fn_compatible\n    return fn(*args_all, **kw)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/functools.py\", line 909, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_scale.py\", line 321, in scale_anndata\n    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(\n                                                                ^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/_utils/__init__.py\", line 165, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/legacy_api_wrap/__init__.py\", line 88, in fn_compatible\n    return fn(*args_all, **kw)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/functools.py\", line 909, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/zhangweikun/era/scRNA-env/lib/python3.11/site-packages/scanpy/preprocessing/_scale.py\", line 194, in scale_array\n    X -= mean\nValueError: output array is read-only\n"
+    }
+  ]
+}

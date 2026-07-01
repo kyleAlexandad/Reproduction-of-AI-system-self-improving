@@ -1,0 +1,12 @@
+iteration,candidate_id,parent_id,valid,reward,score,bio_score,batch_mixing_score,embedding_shape,runtime_s,candidate_path,error
+0,0,,True,1.0699458867311478,1.0699458867311478,0.7258429974317551,0.3441028892993927,"[300, 10]",1.947,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_000.py,
+1,1,0,True,1.2525294265942648,1.2525294265942648,0.7539181113243103,0.4986113152699545,"[300, 50]",1.85,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_001.py,
+2,2,1,True,1.2516396644059569,1.2516396644059569,0.75300332903862,0.49863633536733687,"[300, 50]",2.48,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_002.py,
+3,3,1,True,1.1867000115192998,1.1867000115192998,0.685936318363574,0.5007636931557259,"[300, 99]",19.782,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_003.py,
+4,4,1,True,1.2050887814111775,1.2050887814111775,0.7049122452735901,0.5001765361375874,"[300, 50]",1.856,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_004.py,
+5,5,1,True,1.1177138946950436,1.1177138946950436,0.6202195957303047,0.49749429896473885,"[300, 8]",2.224,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_005.py,
+6,6,2,True,1.2525294182123616,1.2525294182123616,0.7539181113243103,0.49861130688805133,"[300, 50]",2.007,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_006.py,
+7,7,6,True,1.2286053449424799,1.2286053449424799,0.7286671996116638,0.49993814533081604,"[300, 99]",1.382,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_007.py,
+8,8,1,False,,,,,,1.26,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_008.py,ValueError: output array is read-only
+9,9,6,True,1.2105180354405143,1.2105180354405143,0.7085677730423092,0.5019502623982051,"[300, 50]",1.447,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_009.py,
+10,10,1,True,1.205088677466847,1.205088677466847,0.7049121409654617,0.5001765365013853,"[300, 50]",1.681,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_iter10/candidates/cand_010.py,

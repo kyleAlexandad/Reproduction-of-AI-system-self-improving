@@ -1,0 +1,7 @@
+iteration,candidate_id,parent_id,valid,reward,score,bio_score,batch_mixing_score,embedding_shape,runtime_s,candidate_path,error
+0,0,,True,1.0699458867311478,1.0699458867311478,0.7258429974317551,0.3441028892993927,"[300, 10]",1.874,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_000.py,
+1,1,0,True,1.2792547962162644,1.2792547962162644,0.7827419936656952,0.4965128025505692,"[300, 30]",1.735,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_001.py,
+2,2,1,True,1.2516395821003243,1.2516395821003243,0.7530032396316528,0.4986363424686715,"[300, 50]",1.565,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_002.py,
+3,3,1,True,1.2773627659771591,1.2773627659771591,0.7807449996471405,0.49661776633001864,"[300, 30]",1.416,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_003.py,
+4,4,1,True,1.213521176661743,1.213521176661743,0.7135571241378784,0.49996405252386467,"[300, 50]",3.875,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_004.py,
+5,5,1,True,1.277362696826458,1.277362696826458,0.7807449400424957,0.49661775678396225,"[300, 30]",1.303,/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_005.py,

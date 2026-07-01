@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "task": "scRNA-seq batch integration (D2A synthetic ERA-scorable scorer)",
+    "note": "Reduced Python-only proxy; NOT the official scIB score. Real scIB (kBET/LISI/PCR/cell-cycle + R) and real data are deferred to D2B.",
+    "reward_definition": "reward = reduced score = bio_score + batch_mixing_score (higher better)",
+    "env": {
+      "python": "3.11.15",
+      "numpy": "1.26.4"
+    }
+  },
+  "results": [
+    {
+      "candidate": "cand_002.py",
+      "candidate_path": "/Users/zhangweikun/era/implementation/saved_runs/scrna_d2a_synthetic_era_smoke/candidates/cand_002.py",
+      "valid": true,
+      "reward": 1.2516395821003243,
+      "score": 1.2516395821003243,
+      "bio_score": 0.7530032396316528,
+      "batch_mixing_score": 0.4986363424686715,
+      "bio_silhouette": 0.5060064792633057,
+      "batch_silhouette": 0.0027273150626569986,
+      "bio_knn_accuracy": 1.0,
+      "batch_knn_mixing": 0.11068875893437313,
+      "embedding_shape": [
+        300,
+        50
+      ],
+      "error": null,
+      "runtime_s": 0.0686
+    }
+  ]
+}
